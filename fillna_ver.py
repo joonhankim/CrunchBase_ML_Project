@@ -46,6 +46,9 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.impute import KNNImputer
+from sklearn.ensemble import VotingClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, roc_auc_score, f1_score, precision_recall_curve, precision_score 
+from sklearn.metrics import recall_score, average_precision_score, auc
 #%%
 #################
 
@@ -241,6 +244,7 @@ document_fill.info()
 imputer = KNNImputer(n_neighbors=5)
 document_fill = pd.DataFrame(imputer.fit_transform(document_fill),columns = document_fill.columns)
 document_fill.isna().sum()
+document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 #document_fill.to_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do1.csv",index=False,encoding='utf8')
 
 #%%
@@ -610,40 +614,98 @@ print('Mean squared error: ', mse_svm)
 print('R2 score: ', r2_svm)
 #%%
 #ligthgbm
+params = {
+    'application': 'binary', # for binary classification
+#     'num_class' : 1, # used for multi-classes
+    'boosting': 'gbdt', # traditional gradient boosting decision tree
+    'num_iterations': 100, 
+    'learning_rate': 0.05,
+    'num_leaves': 62,
+    'device': 'cpu', # you can use GPU to achieve faster learning
+    'max_depth': -1, # <0 means no limit
+    'max_bin': 510, # Small number of bins may reduce training accuracy but can deal with over-fitting
+    'lambda_l1': 5, # L1 regularization
+    'lambda_l2': 10, # L2 regularization
+    'metric' : 'binary_error',
+    'subsample_for_bin': 200, # number of samples for constructing bins
+    'subsample': 1, # subsample ratio of the training instance
+    'colsample_bytree': 0.8, # subsample ratio of columns when constructing the tree
+    'min_split_gain': 0.5, # minimum loss reduction required to make further partition on a leaf node of the tree
+    'min_child_weight': 1, # minimum sum of instance weight (hessian) needed in a leaf
+    'min_child_samples': 5# minimum number of data needed in a leaf
+}
+
+mdl = lgb.LGBMClassifier(boosting_type= 'gbdt', 
+          objective = 'binary', 
+          n_jobs = -1, 
+          silent = True,
+          max_depth = params['max_depth'],
+          max_bin = params['max_bin'], 
+          subsample_for_bin = params['subsample_for_bin'],
+          subsample = params['subsample'], 
+          min_split_gain = params['min_split_gain'], 
+          min_child_weight = params['min_child_weight'], 
+          min_child_samples = params['min_child_samples'])
+
 x_train = svc.fit_transform(X_train_res)
 x_test = svc.transform(X_test)
 train_ds = lgb.Dataset(x_train, label = y_train_res.ravel()) 
 test_ds = lgb.Dataset(x_test, label = y_test) 
 
-params = {'learning_rate': 0.01, 
-          'max_depth': 16, 
-          'boosting': 'gbdt', 
-          'objective': 'binary', 
-          'metric': 'binary_logloss', 
-          'is_training_metric': True, 
-          'num_leaves': 144}
+gridParams = {
+    'learning_rate': [0.005, 0.01],
+    'n_estimators': [8,16,24],
+    'num_leaves': [6,8,12,16], 
+    'boosting_type' : ['gbdt', 'dart'],
+    'objective' : ['binary'],
+    'max_bin':[255, 510], 
+    'random_state' : [500],
+    'colsample_bytree' : [0.64, 0.65, 0.66],
+    'subsample' : [0.7,0.75],
+    'reg_alpha' : [1,1.2],
+    'reg_lambda' : [1,1.2,1.4],
+    }
+grid = GridSearchCV(mdl, gridParams, verbose=1, cv=4, n_jobs=-1)
+# Run the grid
+grid.fit(X_train_res, y_train_res.ravel())
+
+params['colsample_bytree'] = grid.best_params_['colsample_bytree']
+params['learning_rate'] = grid.best_params_['learning_rate'] 
+params['max_bin'] = grid.best_params_['max_bin']
+params['num_leaves'] = grid.best_params_['num_leaves']
+params['reg_alpha'] = grid.best_params_['reg_alpha']
+params['reg_lambda'] = grid.best_params_['reg_lambda']
+params['subsample'] = grid.best_params_['subsample']
 
 lgb_model = lgb.train(params, train_ds, 1000, test_ds, verbose_eval=100, early_stopping_rounds=100)
 
 predict_train = lgb_model.predict(X_train_res)
 predict_test = lgb_model.predict(x_test)
 
-# Calculating the accuracy
+
 acc_lgb = round( metrics.accuracy_score(predict_test.round(), y_test) , 3 )
 print( 'Accuracy of LGB model : ', acc_lgb )
-#mse_lgb = mean_squared_error(y_test, predict_test.round())
-#r2_lgb= r2_score(y_test, predict_test.round())
+
 f1_lgb=f1_score(y_test, predict_test.round(), average='weighted')
 roc_lgb=np.round(roc_auc_score(y_test, predict_test.round(), average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=lgb_model.predict(X_test), 
-    y_score=lgb_model.predict_proba(X_test))
-print(report_with_auc)
+
+# report_with_auc = class_report(
+#     y_true=y_test, 
+#     y_pred=lgb_model.predict(X_test), 
+#     y_score=lgb_model.predict_proba(X_test))
+
+# print(report_with_auc)
 print('f1 score: ', f1_lgb)
 print('auc  score: ', roc_lgb)
-#print('Mean squared error: ', mse_lgb)
-#print('R2 score: ', r2_lgb)
+
+
+recall_lgb = np.round(recall_score(y_test, predict_test.round(), average='weighted'), decimals=4)
+precis_lgb = np.round(precision_score(y_test, predict_test.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_lgb)
+print('precision  score: ', precis_lgb)
+
+
 
 
 ax = lgb.plot_importance(lgb_model, max_num_features=14, figsize=(10,10))
@@ -748,8 +810,24 @@ report_with_auc = class_report(
     y_score=adaBoost_grid.predict_proba(X_test))
 print(report_with_auc)
 
+#%%
+voting_estimators = [('rf', grid_obj),('xgb', search),('ada', grid),("log",grid_log)]
 
+estimators_with_names = [(name, grid_search.best_estimator_) for name, grid_search in voting_estimators]
 
+voting_classifier = VotingClassifier(estimators=estimators_with_names,voting='soft')
+
+voting_classifier.fit(X_train, y_train)
+voting_classifier.score(X_test, y_test)
+y_pred_voting = voting_classifier.predict(X_test)
+acc_voting = round( metrics.accuracy_score(y_pred_voting.round(), y_test) , 3 )
+print( 'Accuracy of voting_classifier : ', acc_voting )
+r2_voting= r2_score(y_test, y_pred_voting)
+f1_voting=f1_score(y_test, y_pred_voting, average='weighted')
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=voting_classifier.predict(X_test), 
+    y_score=voting_classifier.predict_proba(X_test))
 #%%
 from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(y_test, y_pred_rf)
@@ -759,8 +837,8 @@ print('\nTrue Negatives(TN) = ', cm[1,1])
 print('\nFalse Positives(FP) = ', cm[0,1])
 print('\nFalse Negatives(FN) = ', cm[1,0])
 #%%
-plt.figure(figsize=(15, 4))
-plt.plot(['Logistic','AdaBoost',"Decision Tree","RandonForest","Support Vector Machines","LightGBM","Xgboost"], [acc_logreg, acc_ada,acc_dt, acc_rf, acc_svm, acc_lgb,acc_xgb], 'ro')
+# plt.figure(figsize=(15, 4))
+# plt.plot(['Logistic','AdaBoost',"Decision Tree","RandonForest","Support Vector Machines","LightGBM","Xgboost"], [acc_logreg, acc_ada,acc_dt, acc_rf, acc_svm, acc_lgb,acc_xgb], 'ro')
 
-plt.show()
+# plt.show()
 #%%
