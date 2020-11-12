@@ -1,0 +1,33 @@
+digraph Tree {
+node [shape=box, style="filled, rounded", color="black", fontname=helvetica] ;
+edge [fontname=helvetica] ;
+0 [label="Estimated_Revenue_Range <= 3.0\nentropy = 1.0\nsamples = 25424\nvalue = [12712, 12712]\nclass = 0", fillcolor="#ffffff"] ;
+1 [label="Active_Tech_Count <= 7.0\nentropy = 0.91\nsamples = 16074\nvalue = [10858, 5216]\nclass = 0", fillcolor="#f1be98"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="Company_Age <= 2520.65\nentropy = 0.43\nsamples = 2002\nvalue = [1826, 176]\nclass = 0", fillcolor="#e88d4c"] ;
+1 -> 2 ;
+3 [label="(...)", fillcolor="#C0C0C0"] ;
+2 -> 3 ;
+24 [label="(...)", fillcolor="#C0C0C0"] ;
+2 -> 24 ;
+79 [label="Number_of_Articles <= 9.2\nentropy = 0.94\nsamples = 14072\nvalue = [9032, 5040]\nclass = 0", fillcolor="#f4c7a7"] ;
+1 -> 79 ;
+80 [label="(...)", fillcolor="#C0C0C0"] ;
+79 -> 80 ;
+839 [label="(...)", fillcolor="#C0C0C0"] ;
+79 -> 839 ;
+1218 [label="Total_Funding_Amount <= 62990632.0\nentropy = 0.72\nsamples = 9350\nvalue = [1854, 7496]\nclass = 1", fillcolor="#6ab5eb"] ;
+0 -> 1218 [labeldistance=2.5, labelangle=-45, headlabel="False"] ;
+1219 [label="Company_Age <= 3960.41\nentropy = 0.99\nsamples = 2245\nvalue = [1003, 1242]\nclass = 1", fillcolor="#d9ecfa"] ;
+1218 -> 1219 ;
+1220 [label="(...)", fillcolor="#C0C0C0"] ;
+1219 -> 1220 ;
+1419 [label="(...)", fillcolor="#C0C0C0"] ;
+1219 -> 1419 ;
+1434 [label="Last_Equity_Funding_Amount <= 12344718.5\nentropy = 0.53\nsamples = 7105\nvalue = [851, 6254]\nclass = 1", fillcolor="#54aae9"] ;
+1218 -> 1434 ;
+1435 [label="(...)", fillcolor="#C0C0C0"] ;
+1434 -> 1435 ;
+1438 [label="(...)", fillcolor="#C0C0C0"] ;
+1434 -> 1438 ;
+}

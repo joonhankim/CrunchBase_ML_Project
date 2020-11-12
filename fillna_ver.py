@@ -45,6 +45,7 @@ from gensim.models import word2vec;print("FAST_VERSION", word2vec.FAST_VERSION)
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.impute import KNNImputer
 #%%
 #################
 
@@ -52,31 +53,21 @@ from sklearn.ensemble import AdaBoostClassifier
 
 
 ################
+#cb_rank삭제
 
-document_healthcare=pd.read_csv(r"C:\Users\eric\Desktop\cb_ml\2010_2019_healthcare.csv",header=0,encoding="ISO-8859-1")
-#Data info
-document_healthcare.info()
+document=pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\2010_2019_healthcare.csv",header=0,encoding="ISO-8859-1")
 
-#data head
-document_healthcare.head()
-
-
-len(document_healthcare)
+document.info()
+document.isna().sum()
+document.head()
+len(document)
 
 
 #%%
 pd.set_option('float_format', '{:f}'.format)
-#%%
-#Check null
-
-document=document_healthcare.drop(["Number of Events","Apptopia - Downloads Last 30 Days","Apptopia - Number of Apps","Unnamed: 27","Unnamed: 28","Unnamed: 29","Unnamed: 30","Unnamed: 31","Unnamed: 32","Unnamed: 28","Unnamed: 29","Unnamed: 30","Unnamed: 31","Unnamed: 32","Unnamed: 33","Unnamed: 34","Unnamed: 35","Unnamed: 36","Unnamed: 37","Unnamed: 38","Unnamed: 39","Unnamed: 40","Unnamed: 41"],axis=1)
-
-#document.isna().sum()
-
-document.info()
 
 #%%
-lof_document = document[['Organization Name','Full Description']]
+lof_document = document[['Full Description']]
 
 cb_healthcare=lof_document.rename(columns={'Full Description': 'Text'})
 cb_healthcare.Text=cb_healthcare.Text.astype(str)
@@ -113,7 +104,7 @@ for i in range(len(cb_healthcare)):
 X=vector_list
 
 df_x = pd.DataFrame(X)
-clf_lof = LocalOutlierFactor(n_neighbors=80,metric='euclidean',n_jobs=-1)
+clf_lof = LocalOutlierFactor(n_neighbors=70,metric='euclidean',n_jobs=-1)
 y_pred = clf_lof.fit_predict(df_x)
 y_pred_score = clf_lof._decision_function(df_x)
 
@@ -144,6 +135,7 @@ a = plt.scatter(X_embedded[:20,0 ], X_embedded[:20, 1], c='red',edgecolor='k', s
 #plt.ylim((-2, 2))
 plt.legend([a, b],
            ["abnormal observations",
+            
             "normal observations"],
            loc="upper left")
 plt.show()
@@ -160,12 +152,12 @@ plt.show()
 #%%
 
 
-document["LOF Score"]= X_scores
+document["LOF_Score"]= X_scores
 
-document["LOF Score"][1]
+document["LOF_Score"][1]
 
-print(type(document["LOF Score"]))
-document=document.drop(["Organization Name","Full Description"],axis=1)
+print(type(document["LOF_Score"]))
+document=document.drop(["Full Description"],axis=1)
 
 
 
@@ -179,77 +171,82 @@ document['Founded Date'] = pd.to_datetime(document['Founded Date'],errors="coerc
 document['Founded Date'] = pd.to_datetime(document['Founded Date']).dt.date
 type(document['Founded Date'][0])
 d = datetime.date(2020, 11, 5)
-document["Company Age"]=d-document['Founded Date']
-document["Company Age"].head(3)
-document["Company Age"]=document["Company Age"].astype('timedelta64[D]')
-document["Company Age"].head(3)
+document["Company_Age"]=d-document['Founded Date']
+document["Company_Age"].head(3)
+document["Company_Age"]=document["Company_Age"].astype('timedelta64[D]')
+document["Company_Age"].head(3)
 
 # calculate last funding to date
 document['Last Funding Date'] = pd.to_datetime(document['Last Funding Date'],errors="coerce")
 document['Last Funding Date'] = pd.to_datetime(document['Last Funding Date'],errors="coerce").dt.date
-document["Last funding to date"]=d-document["Last Funding Date"]
-document["Last funding to date"]=document["Last funding to date"].astype('timedelta64[D]')
-document["Last funding to date"][0]
+document["Last_funding_to_date"]=d-document["Last Funding Date"]
+document["Last_funding_to_date"]=document["Last_funding_to_date"].astype('timedelta64[D]')
+document["Last_funding_to_date"][0]
 
 document=document.drop(['Founded Date'], axis=1)
 document.isna().sum()
 document.info()
 
-document_fill = document.fillna(0)
+
+
+#document_fill = document.fillna(0)
 
 
 ###remove , in excel####
 #%%
-document_fill.to_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do.csv",index=False,encoding='utf8')
+document.to_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_do.csv",index=False,encoding='utf8')
 
-document_fill = pd.read_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do.csv",header=0,encoding="utf8")
+document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_do.csv",header=0,encoding="utf8")
 #%%
-document_fill["IPO Status"] = document_fill["IPO Status"].astype("category")
-#%%
-
-document_fill["Aberdeen - IT Spend"] = document_fill["Aberdeen - IT Spend"].astype(float)
-document_fill["Aberdeen - IT Spend"].describe()
-
-for i in range(len(document_fill)):
-    if document_fill["Aberdeen - IT Spend"][i] >= 127363.096160:
-        document_fill["Aberdeen - IT Spend"][i] = 1
-    else:
-        document_fill["Aberdeen - IT Spend"][i] = 0
+#document_fill=document_fill.drop("CB_Rank",axis=1)
+document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 #%%
 
-document_fill["Estimated Revenue Range"] = document_fill["Estimated Revenue Range"].astype('category')
-document_fill["Last Equity Funding Type"] = document_fill["Last Equity Funding Type"].astype('category')
-document_fill["SEMrush - Visit Duration"] = document_fill["SEMrush - Visit Duration"].astype(float)
-document_fill["SEMrush - Visit Duration"] = document_fill["SEMrush - Visit Duration"].astype(float)
+# document_fill["IT_Spend"] = document_fill["IT_Spend"].astype(float)
+# document_fill["IT_Spend"].describe()
 
-document_fill=document_fill.drop(["Total Equity Funding Amount"],axis=1)
+# for i in range(len(document_fill)):
+#     if document_fill["IT_Spend"][i] >= 163970.969946:
+#         document_fill["IT_Spend"][i] = 1
+#     else:
+#         document_fill["IT_Spend"][i] = 0
+#%%
+# document_fill["Estimated_Revenue_Range"] =document_fill["Estimated_Revenue_Range"].astype('category')
+# document_fill["Last_Equity_Funding_Type"] =document_fill["Last_Equity_Funding_Type"].astype('category')
+# document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
+# document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
+
+document_fill=document_fill.drop(["Total Equity Funding Amount","Last Funding Date"],axis=1)
 document_fill.info()
 #%%
 
 
-document_fill['Estimated Revenue Range'].replace(to_replace=['0', 'Less than $1M', '$1M to $10M','$10M to $50M','$50M to $100M','$100M to $500M','$500M to $1B','$1B to $10B','$10B+'], value=[1, 2, 3,4,5,6,7,8,9], inplace=True)
+document_fill['Estimated_Revenue_Range'].replace(to_replace=['0', 'Less than $1M', '$1M to $10M','$10M to $50M','$50M to $100M','$100M to $500M','$500M to $1B','$1B to $10B','$10B+'], value=[1, 2, 3,4,5,6,7,8,9], inplace=True)
 
-document_fill['Last Equity Funding Type'].replace(to_replace=['Angel', 'Corporate Round', 'Equity Crowdfunding','Initial Coin Offering','Post-IPO Equity','Pre-Seed','Private Equity','Seed','Series A','Series B','Series C','Series D','Series E','Series F','Series G','Series H','Undisclosed','Venture - Series Unknown'], value=[1, 2, 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], inplace=True)
-
-
-
-document_fill["Estimated Revenue Range"] = document_fill["Estimated Revenue Range"].astype('category')
-document_fill["Last Equity Funding Type"] = document_fill["Last Equity Funding Type"].astype('category')
+document_fill["Last_Equity_Funding_Type"].replace(to_replace=['Angel', 'Corporate Round', 'Equity Crowdfunding','Initial Coin Offering','Post-IPO Equity','Pre-Seed','Private Equity','Seed','Series A','Series B','Series C','Series D','Series E','Series F','Series G','Series H','Undisclosed','Venture - Series Unknown'], value=[1, 2, 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], inplace=True)
 
 
-document_fill = pd.concat([document_fill.drop('Estimated Revenue Range', axis=1), pd.get_dummies(document_fill['Estimated Revenue Range'],prefix="Estimated Revenue Range")], axis=1)
-document_fill = pd.concat([document_fill.drop('Last Equity Funding Type', axis=1), pd.get_dummies(document_fill['Last Equity Funding Type'],prefix="Last Equity Funding Type")], axis=1)
+document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_Type"].astype(float)
+# document_fill['Estimated_Revenue_Range'] = document_fill['Estimated_Revenue_Range'].astype('category')
+# document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_Type"].astype('category')
+
+
+# document_fill = pd.concat([document_fill.drop('Estimated_Revenue_Range', axis=1), pd.get_dummies(document_fill['Estimated_Revenue_Range'],prefix="Estimated_Revenue_Range")], axis=1)
+# document_fill = pd.concat([document_fill.drop('Last_Equity_Funding_Type', axis=1), pd.get_dummies(document_fill['Last_Equity_Funding_Type'],prefix="Last_Equity_Funding_Type")], axis=1)
 
 
 
 document_fill.info()
+
+imputer = KNNImputer(n_neighbors=5)
+document_fill = pd.DataFrame(imputer.fit_transform(document_fill),columns = document_fill.columns)
 document_fill.isna().sum()
 #document_fill.to_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do1.csv",index=False,encoding='utf8')
 
 #%%
 ####
-X=document_fill.loc[:, document_fill.columns != 'IPO Status']
-y=document_fill['IPO Status'] 
+X=document_fill.loc[:, document_fill.columns != 'IPO_Status']
+y=document_fill['IPO_Status'] 
 #%%
 ########################################################################
 #Oversampling
@@ -458,9 +455,31 @@ print(report_with_auc)
 print('f1 score: ', f1_logreg)
 print('auc  score: ', roc_logreg)
 #%%
+from sklearn.ensemble import GradientBoostingClassifier
+parameters = {
+    "loss":["deviance"],
+    "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
+    "min_samples_split": np.linspace(0.1, 0.5, 12),
+    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
+    "max_depth":[3,5,8],
+    "max_features":["log2","sqrt"],
+    "criterion": ["friedman_mse",  "mae"],
+    "subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
+    "n_estimators":[10]
+    }
 
+clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
 
+clf.fit(X_train_res, y_train_res.ravel())
+print(clf.score(X_train_res, y_train_res.ravel()))
+print(clf.best_params_)
 
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=clf.predict(X_test), 
+    y_score=clf.predict_proba(X_test))
+
+print(report_with_auc)
 #%%
 # Create a Decision tree classifier model
 clf = DecisionTreeClassifier()
@@ -486,18 +505,23 @@ y_pred_dt= clf.predict(X_test)
 # Calculating the accuracy
 acc_dt = round( metrics.accuracy_score(y_test, y_pred_dt) , 3 )
 print( 'Accuracy of Decision Tree model : ', acc_dt )
-mse_dt = mean_squared_error(y_test, y_pred_dt)
-r2_dt= r2_score(y_test, y_pred_dt)
+#mse_dt = mean_squared_error(y_test, y_pred_dt)
+#r2_dt= r2_score(y_test, y_pred_dt)
 f1_dt=f1_score(y_test, y_pred_dt, average='weighted')
 roc_dt=np.round(roc_auc_score(y_test, y_pred_dt, average='weighted'), decimals=4)
-print('Mean squared error: ', mse_dt)
-print('R2 score: ', r2_dt)
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=clf.predict(X_test), 
+    y_score=clf.predict_proba(X_test))
+print(report_with_auc)
+print('f1 score: ', f1_dt)
+print('auc  score: ', roc_dt)
 #%%
 #tree visualization
 from sklearn.tree import export_graphviz
 
 #export_graphviz(clf, out_file='tree.dot')
-export_graphviz(clf, out_file='tree_spurs_dt.dot', 
+export_graphviz(clf, out_file='tree_dong_dt.dot', 
                 feature_names = X.columns,
                 class_names = ["0","1"],
                 max_depth = 2, # 표현하고 싶은 최대 depth
@@ -505,10 +529,6 @@ export_graphviz(clf, out_file='tree_spurs_dt.dot',
                 filled = True, # class별 color 채우기
                 rounded=True, # 박스의 모양을 둥글게
                )
-
-
-
-
 #%%
 # Create a Random Forest Classifier
 rf = RandomForestClassifier()
@@ -538,12 +558,19 @@ y_pred_rf = rf.predict(X_test)
 # Calculating the accuracy
 acc_rf = round( metrics.accuracy_score(y_test, y_pred_rf)  , 3 )
 print( 'Accuracy of Random Forest model : ', acc_rf )
-mse_rf = mean_squared_error(y_test, y_pred_rf)
-r2_rf= r2_score(y_test, y_pred_rf)
+#mse_rf = mean_squared_error(y_test, y_pred_rf)
+#r2_rf= r2_score(y_test, y_pred_rf)
 f1_rf=f1_score(y_test, y_pred_rf, average='weighted')
 roc_rf=np.round(roc_auc_score(y_test, y_pred_rf, average='weighted'), decimals=4)
-print('Mean squared error: ', mse_rf)
-print('R2 score: ', r2_rf)
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=rf.predict(X_test), 
+    y_score=rf.predict_proba(X_test))
+print(report_with_auc)
+print('f1 score: ', f1_rf)
+print('auc  score: ', roc_rf)
+#print('Mean squared error: ', mse_rf)
+#print('R2 score: ', r2_rf)
 
 
 featureImpList= []
@@ -553,11 +580,6 @@ for feat, importance in zip(X_train_res.columns, rf.feature_importances_):
 
 fT_df = pd.DataFrame(featureImpList, columns = ['Feature', 'Importance'])
 print (fT_df.sort_values('Importance', ascending = False))
-#%%
-
-
-
-
 #%%
 svc = StandardScaler()
 X_train_scaled = svc.fit_transform(X_train_res)
@@ -587,11 +609,6 @@ roc_svm=np.round(roc_auc_score(y_test, y_pred_sc, average='weighted'), decimals=
 print('Mean squared error: ', mse_svm)
 print('R2 score: ', r2_svm)
 #%%
-
-
-
-
-#%%
 #ligthgbm
 x_train = svc.fit_transform(X_train_res)
 x_test = svc.transform(X_test)
@@ -614,18 +631,24 @@ predict_test = lgb_model.predict(x_test)
 # Calculating the accuracy
 acc_lgb = round( metrics.accuracy_score(predict_test.round(), y_test) , 3 )
 print( 'Accuracy of LGB model : ', acc_lgb )
-mse_lgb = mean_squared_error(y_test, predict_test.round())
-r2_lgb= r2_score(y_test, predict_test.round())
+#mse_lgb = mean_squared_error(y_test, predict_test.round())
+#r2_lgb= r2_score(y_test, predict_test.round())
 f1_lgb=f1_score(y_test, predict_test.round(), average='weighted')
 roc_lgb=np.round(roc_auc_score(y_test, predict_test.round(), average='weighted'), decimals=4)
-print('Mean squared error: ', mse_lgb)
-print('R2 score: ', r2_lgb)
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=lgb_model.predict(X_test), 
+    y_score=lgb_model.predict_proba(X_test))
+print(report_with_auc)
+print('f1 score: ', f1_lgb)
+print('auc  score: ', roc_lgb)
+#print('Mean squared error: ', mse_lgb)
+#print('R2 score: ', r2_lgb)
 
 
 ax = lgb.plot_importance(lgb_model, max_num_features=14, figsize=(10,10))
 plt.show()
 #%%
-
 import graphviz 
 export_graphviz(estimator, out_file='tree_rf.dot', 
                 feature_names = X.columns,
@@ -642,7 +665,6 @@ graph = graphviz.Source(dot_data)
 graph 
 #%%
 #xgb
-
 xgb_model = xgb.XGBClassifier()
 
 def report_best_scores(results, n_top=3):
@@ -676,51 +698,20 @@ y_pred_xgb= search.predict(X_test)
 # Calculating the accuracy
 acc_xgb = round( metrics.accuracy_score(y_pred_xgb.round(), y_test) , 3 )
 print( 'Accuracy of XGB model : ', acc_xgb )
-mse_xgb = mean_squared_error(y_test, y_pred_xgb.round())
-r2_xgb= r2_score(y_test, y_pred_xgb.round())
+#mse_xgb = mean_squared_error(y_test, y_pred_xgb.round())
+#r2_xgb= r2_score(y_test, y_pred_xgb.round())
 f1_xgb=f1_score(y_test, y_pred_xgb.round(), average='weighted')
 roc_xgb=np.round(roc_auc_score(y_test, y_pred_xgb.round(), average='weighted'), decimals=4)
-print('Mean squared error: ', mse_xgb)
-print('R2 score: ', r2_xgb)
-
-#xgb.plot_importance(search)
-#%%
-
+report_with_auc = class_report(
+    y_true=y_test, 
+    y_pred=search.predict(X_test), 
+    y_score=search.predict_proba(X_test))
+print(report_with_auc)
+print('f1 score: ', f1_xgb)
+print('auc  score: ', roc_xgb)
 #%%
 #adaboost
-n_estimators = [100,140,145,150,160, 170,175,180,185];
-cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
-learning_r = [0.1,1,0.01,0.5]
-
-parameters = {'n_estimators':n_estimators,
-              'learning_rate':learning_r
-              
-        }
-grid = GridSearchCV(AdaBoostRegressor(base_estimator= None, ## If None, then the base estimator is a decision tree.
-                                     ),
-                                 param_grid=parameters,
-                                 cv=cv,
-                                 n_jobs = -1)
-            
-grid.fit(X_train_res, y_train_res.ravel()) 
-
-adaBoost_grid = grid.best_estimator_
-# Train the model using the training sets 
-adaBoost_grid.fit(X_train_res, y_train_res.ravel())
-
-# Prediction on test data
-y_pred_ada = adaBoost_grid.predict(X_test)
-
-# Calculating the accuracy
-acc_ada = round( metrics.accuracy_score(y_pred_ada.round(), y_test) , 3 )
-print( 'Accuracy of AdaBoost model : ', acc_ada )
-mse_ada = mean_squared_error(y_test, y_pred_ada.round())
-r2_ada= r2_score(y_test, y_pred_ada.round())
-f1_ada=f1_score(y_test, y_pred_ada.round(), average='weighted')
-roc_ada=np.round(roc_auc_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
-print('Mean squared error: ', mse_ada)
-print('R2 score: ', r2_ada)
-#%%
+from sklearn.ensemble import AdaBoostClassifier
 n_estimators = [100,140,145,150,160, 170,175,180,185];
 cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
 learning_r = [0.1,1,0.01,0.5]
@@ -747,59 +738,18 @@ y_pred_ada = adaBoost_grid.predict(X_test)
 # Calculating the accuracy
 acc_ada = round( metrics.accuracy_score(y_pred_ada.round(), y_test) , 3 )
 print( 'Accuracy of AdaBoost model : ', acc_ada )
-mse_ada = mean_squared_error(y_test, y_pred_ada.round())
-r2_ada= r2_score(y_test, y_pred_ada.round())
+#mse_ada = mean_squared_error(y_test, y_pred_ada.round())
+#r2_ada= r2_score(y_test, y_pred_ada.round())
 f1_ada=f1_score(y_test, y_pred_ada.round(), average='weighted')
-
-#%%
+roc_ada=np.round(roc_auc_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
 report_with_auc = class_report(
     y_true=y_test, 
     y_pred=adaBoost_grid.predict(X_test), 
     y_score=adaBoost_grid.predict_proba(X_test))
-
 print(report_with_auc)
-print('Mean squared error: ', mse_ada)
-print('R2 score: ', r2_ada)
-#%%
-#mlp classifier
-# =============================================================================
-# parameters_mlp = {'solver': ['lbfgs'], 'max_iter': [500,1000,1500], 'alpha': 10.0 ** -np.arange(1, 7), 'hidden_layer_sizes':np.arange(5, 12), 'random_state':[0,1,2,3,4,5,6,7,8,9]}
-# =============================================================================
 
-# =============================================================================
-# clf_mlp = GridSearchCV(MLPClassifier(), parameters_mlp, n_jobs=-1)
-# 
-# 
-# 
-# clf_mlp.fit(X_train_res, y_train_res.ravel())
-# 
-# clf_mlp.best_params_
-# =============================================================================
 
-#%%
-# Train the model using the training sets 
 
-MLP = MLPClassifier(hidden_layer_sizes=(100,100,100), max_iter=500, alpha=0.0001,solver='sgd', verbose=10,  random_state=21,tol=0.000000001)
-
-MLP.fit(X_train_res, y_train_res.ravel())
-
-y_pred_mlp= MLP.predict(X_test)
-
-accuracy_score(y_test, y_pred_mlp)
-# Calculating the accuracy
-acc_mlp = round( metrics.accuracy_score(y_pred_mlp.round(), y_test) , 3 )
-print( 'Accuracy of MLP_Classifier : ', acc_mlp )
-
-mse_mlp = mean_squared_error(y_test, y_pred_mlp.round())
-r2_mlp= r2_score(y_test, y_pred_mlp)
-f1_mlp=f1_score(y_test, y_pred_mlp, average='weighted')
-roc_mlp=np.round(roc_auc_score(y_test, y_pred_mlp, average='weighted'), decimals=4)
-print('Mean squared error: ', mse_mlp)
-print('R2 score: ', r2_mlp)
-#%%
-print('Training set score: {:.4f}'.format(MLP.score(X_train, y_train)))
-
-print('Test set score: {:.4f}'.format(MLP.score(X_test, y_test)))
 #%%
 from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(y_test, y_pred_rf)
