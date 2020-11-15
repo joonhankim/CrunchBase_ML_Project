@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import GridSearchCV,RandomizedSearchCV
-from sklearn.ensemble import RandomForestClassifier,AdaBoostRegressor
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn import svm
-from sklearn.metrics import mean_squared_error, r2_score
+#from sklearn import svm
+from sklearn.metrics import make_scorer,confusion_matrix
 import lightgbm as lgb
 from sklearn.metrics import f1_score
 from sklearn.tree import export_graphviz
@@ -31,9 +31,9 @@ from scipy.stats import uniform, randint
 #from xgboost import plot_importance
 from sklearn.model_selection import StratifiedShuffleSplit
 import seaborn as sns
-from sklearn.neural_network import MLPClassifier
+
 from sklearn.metrics import accuracy_score
-import codecs
+
 from gensim.models.doc2vec import LabeledSentence
 from gensim.models import Doc2Vec
 from nltk.corpus import stopwords
@@ -47,8 +47,12 @@ from sklearn.manifold import TSNE
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.impute import KNNImputer
 from sklearn.ensemble import VotingClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, roc_auc_score, f1_score, precision_recall_curve, precision_score 
-from sklearn.metrics import recall_score, average_precision_score, auc
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, roc_auc_score, f1_score, precision_recall_curve, precision_score,recall_score
+#from sklearn.metrics import recall_score, average_precision_score, auc
+from catboost import CatBoostClassifier
+import scikitplot as skplt
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 #%%
 #################
 
@@ -267,6 +271,9 @@ print("Number transactions y_test dataset: ", y_test.shape)
 print("Before OverSampling, counts of label '1': {}".format(sum(y_train==1)))
 print("Before OverSampling, counts of label '0': {} \n".format(sum(y_train==0)))
 
+print("Before OverSampling, counts of label '1': {}".format(sum(y_test==1)))
+print("Before OverSampling, counts of label '0': {} \n".format(sum(y_test==0)))
+
 sm = SMOTE(random_state=2,k_neighbors=5)
 X_train_res, y_train_res = sm.fit_sample(X_train, y_train.ravel())
 
@@ -280,7 +287,7 @@ print("After OverSampling, counts of label '0': {}".format(sum(y_train_res==0)))
 plt.hist(y_train_res)
 plt.draw()
 
-X_train_res.info()
+
 
 #%%
 
@@ -331,106 +338,6 @@ plt.show()
 #Modeling
 ########################################################################
 #%%
-#evaluation function
-from scipy import interp
-
-from  sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import roc_curve, auc
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.metrics import classification_report
-
-def class_report(y_true, y_pred, y_score=None, average='micro'):
-    if y_true.shape != y_pred.shape:
-        print("Error! y_true %s is not the same shape as y_pred %s" % (
-              y_true.shape,
-              y_pred.shape)
-        )
-        return
-
-    lb = LabelBinarizer()
-
-    if len(y_true.shape) == 1:
-        lb.fit(y_true)
-
-    #Value counts of predictions
-    labels, cnt = np.unique(
-        y_pred,
-        return_counts=True)
-    n_classes = len(labels)
-    pred_cnt = pd.Series(cnt, index=labels)
-
-    metrics_summary = precision_recall_fscore_support(
-            y_true=y_true,
-            y_pred=y_pred,
-            labels=labels)
-
-    avg = list(precision_recall_fscore_support(
-            y_true=y_true, 
-            y_pred=y_pred,
-            average='weighted'))
-
-    metrics_sum_index = ['precision', 'recall', 'f1-score', 'support']
-    class_report_df = pd.DataFrame(
-        list(metrics_summary),
-        index=metrics_sum_index,
-        columns=labels)
-
-    support = class_report_df.loc['support']
-    total = support.sum() 
-    class_report_df['avg / total'] = avg[:-1] + [total]
-
-    class_report_df = class_report_df.T
-    class_report_df['pred'] = pred_cnt
-    class_report_df['pred'].iloc[-1] = total
-
-    if not (y_score is None):
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for label_it, label in enumerate(labels):
-            fpr[label], tpr[label], _ = roc_curve(
-                (y_true == label).astype(int), 
-                y_score[:, label_it])
-
-            roc_auc[label] = auc(fpr[label], tpr[label])
-
-        if average == 'micro':
-            if n_classes <= 2:
-                fpr["avg / total"], tpr["avg / total"], _ = roc_curve(
-                    lb.transform(y_true).ravel(), 
-                    y_score[:, 1].ravel())
-            else:
-                fpr["avg / total"], tpr["avg / total"], _ = roc_curve(
-                        lb.transform(y_true).ravel(), 
-                        y_score.ravel())
-
-            roc_auc["avg / total"] = auc(
-                fpr["avg / total"], 
-                tpr["avg / total"])
-
-        elif average == 'macro':
-            # First aggregate all false positive rates
-            all_fpr = np.unique(np.concatenate([
-                fpr[i] for i in labels]
-            ))
-
-            # Then interpolate all ROC curves at this points
-            mean_tpr = np.zeros_like(all_fpr)
-            for i in labels:
-                mean_tpr += interp(all_fpr, fpr[i], tpr[i])
-
-            # Finally average it and compute AUC
-            mean_tpr /= n_classes
-
-            fpr["macro"] = all_fpr
-            tpr["macro"] = mean_tpr
-
-            roc_auc["avg / total"] = auc(fpr["macro"], tpr["macro"])
-
-        class_report_df['AUC'] = pd.Series(roc_auc)
-
-    return class_report_df
-#%%
 # Create a Logistic regression classifier
 logreg = LogisticRegression()
 
@@ -448,18 +355,25 @@ y_pred_LF = logreg_2.predict(X_test)
 acc_logreg = round( metrics.accuracy_score(y_test, y_pred_LF) , 3)
 print( 'Accuracy of Logistic Regression model : ', acc_logreg )
 
-f1_logreg=f1_score(y_test, y_pred_LF, average='weighted')
-roc_logreg=np.round(roc_auc_score(y_test, y_pred_LF, average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=logreg_2.predict(X_test), 
-    y_score=logreg_2.predict_proba(X_test))
+acc_lf = round( metrics.accuracy_score(y_test, y_pred_LF) , 3 )
+print( 'Accuracy of Decision Tree model : ', acc_lf )
 
-print(report_with_auc)
-print('f1 score: ', f1_logreg)
-print('auc  score: ', roc_logreg)
+f1_lf=f1_score(y_test, y_pred_LF.round(), average='weighted')
+roc_lf=np.round(roc_auc_score(y_test, y_pred_LF.round(), average='weighted'), decimals=4)
+
+print('f1 score: ', f1_lf)
+print('auc  score: ', roc_lf)
+
+
+recall_lf = np.round(recall_score(y_test, y_pred_LF.round(), average='weighted'), decimals=4)
+precis_lf = np.round(precision_score(y_test, y_pred_LF.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_lf)
+print('precision  score: ', precis_lf)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_LF.round())
 #%%
-from sklearn.ensemble import GradientBoostingClassifier
+
 parameters = {
     "loss":["deviance"],
     "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
@@ -478,12 +392,26 @@ clf.fit(X_train_res, y_train_res.ravel())
 print(clf.score(X_train_res, y_train_res.ravel()))
 print(clf.best_params_)
 
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=clf.predict(X_test), 
-    y_score=clf.predict_proba(X_test))
+y_pred_gb= clf.predict(X_test)
 
-print(report_with_auc)
+acc_gb = round( metrics.accuracy_score(y_test, y_pred_gb) , 3 )
+print( 'Accuracy of Decision Tree model : ', acc_gb )
+
+f1_gb=f1_score(y_test, y_pred_gb.round(), average='weighted')
+roc_gb=np.round(roc_auc_score(y_test, y_pred_gb.round(), average='weighted'), decimals=4)
+
+print('f1 score: ', f1_gb)
+print('auc  score: ', roc_gb)
+
+
+recall_gb = np.round(recall_score(y_test, y_pred_gb.round(), average='weighted'), decimals=4)
+precis_gb = np.round(precision_score(y_test, y_pred_gb.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_gb)
+print('precision  score: ', precis_gb)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_gb.round())
+
 #%%
 # Create a Decision tree classifier model
 clf = DecisionTreeClassifier()
@@ -509,17 +437,21 @@ y_pred_dt= clf.predict(X_test)
 # Calculating the accuracy
 acc_dt = round( metrics.accuracy_score(y_test, y_pred_dt) , 3 )
 print( 'Accuracy of Decision Tree model : ', acc_dt )
-#mse_dt = mean_squared_error(y_test, y_pred_dt)
-#r2_dt= r2_score(y_test, y_pred_dt)
-f1_dt=f1_score(y_test, y_pred_dt, average='weighted')
-roc_dt=np.round(roc_auc_score(y_test, y_pred_dt, average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=clf.predict(X_test), 
-    y_score=clf.predict_proba(X_test))
-print(report_with_auc)
+
+f1_dt=f1_score(y_test, y_pred_dt.round(), average='weighted')
+roc_dt=np.round(roc_auc_score(y_test, y_pred_dt.round(), average='weighted'), decimals=4)
+
 print('f1 score: ', f1_dt)
 print('auc  score: ', roc_dt)
+
+
+recall_dt = np.round(recall_score(y_test, y_pred_dt.round(), average='weighted'), decimals=4)
+precis_dt = np.round(precision_score(y_test, y_pred_dt.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_dt)
+print('precision  score: ', precis_dt)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_dt.round())
 #%%
 #tree visualization
 from sklearn.tree import export_graphviz
@@ -562,20 +494,22 @@ y_pred_rf = rf.predict(X_test)
 # Calculating the accuracy
 acc_rf = round( metrics.accuracy_score(y_test, y_pred_rf)  , 3 )
 print( 'Accuracy of Random Forest model : ', acc_rf )
-#mse_rf = mean_squared_error(y_test, y_pred_rf)
-#r2_rf= r2_score(y_test, y_pred_rf)
-f1_rf=f1_score(y_test, y_pred_rf, average='weighted')
-roc_rf=np.round(roc_auc_score(y_test, y_pred_rf, average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=rf.predict(X_test), 
-    y_score=rf.predict_proba(X_test))
-print(report_with_auc)
+
+
+f1_rf=f1_score(y_test, y_pred_rf.round(), average='weighted')
+roc_rf=np.round(roc_auc_score(y_test, y_pred_rf.round(), average='weighted'), decimals=4)
+
 print('f1 score: ', f1_rf)
 print('auc  score: ', roc_rf)
-#print('Mean squared error: ', mse_rf)
-#print('R2 score: ', r2_rf)
 
+
+recall_rf = np.round(recall_score(y_test, y_pred_rf.round(), average='weighted'), decimals=4)
+precis_rf = np.round(precision_score(y_test, y_pred_rf.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_rf)
+print('precision  score: ', precis_rf)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_rf.round())
 
 featureImpList= []
 for feat, importance in zip(X_train_res.columns, rf.feature_importances_):  
@@ -589,29 +523,38 @@ svc = StandardScaler()
 X_train_scaled = svc.fit_transform(X_train_res)
 X_test_scaled = svc.transform(X_test)
 
-clf_svc= svm.SVC()
+# clf_svc= svm.SVC()
 
-params = {'C': [0.001, 0.01, 0.1, 1, 10, 100],
-               'gamma': [0.001, 0.01, 0.1, 1, 10, 100]}
-grid = GridSearchCV(clf_svc,params,cv=5,n_jobs=-1)
-grid.fit(X_train_scaled,y_train_res.ravel())
+# params = {'C': [0.001, 0.01, 0.1, 1, 10, 100],
+#                'gamma': [0.001, 0.01, 0.1, 1, 10, 100]}
+# grid = GridSearchCV(clf_svc,params,cv=5,n_jobs=-1)
+# grid.fit(X_train_scaled,y_train_res.ravel())
 
-gird_svc=grid.best_estimator_
-# Train the model using the training sets 
-gird_svc.fit(X_train_scaled,y_train_res.ravel())
+# gird_svc=grid.best_estimator_
+# # Train the model using the training sets 
+# gird_svc.fit(X_train_scaled,y_train_res.ravel())
 
-# Prediction on test data
-y_pred_sc = gird_svc.predict(X_test_scaled)
+# # Prediction on test data
+# y_pred_sc = gird_svc.predict(X_test_scaled)
 
-# Calculating the accuracy
-acc_svm = round( metrics.accuracy_score(y_test, y_pred_sc) , 3 )
-print( 'Accuracy of SVM model : ', acc_svm )
-mse_svm = mean_squared_error(y_test, y_pred_sc)
-r2_svm= r2_score(y_test, y_pred_sc)
-f1_svm=f1_score(y_test, y_pred_sc, average='weighted')
-roc_svm=np.round(roc_auc_score(y_test, y_pred_sc, average='weighted'), decimals=4)
-print('Mean squared error: ', mse_svm)
-print('R2 score: ', r2_svm)
+# # Calculating the accuracy
+# acc_svm = round( metrics.accuracy_score(y_test, y_pred_sc) , 3 )
+# print( 'Accuracy of SVM model : ', acc_svm )
+
+# f1_svm=f1_score(y_test, y_pred_sc.round(), average='weighted')
+# roc_svm=np.round(roc_auc_score(y_test, y_pred_sc.round(), average='weighted'), decimals=4)
+
+# print('f1 score: ', f1_svm)
+# print('auc  score: ', roc_svm)
+
+
+# recall_svm = np.round(recall_score(y_test, y_pred_sc.round(), average='weighted'), decimals=4)
+# precis_svm= np.round(precision_score(y_test, y_pred_sc.round(), average='weighted'), decimals=4)
+
+# print('recall score: ', recall_svm)
+# print('precision  score: ', precis_svm)
+
+# skplt.metrics.plot_confusion_matrix(y_test, y_pred_sc.round())
 #%%
 #ligthgbm
 params = {
@@ -665,50 +608,53 @@ gridParams = {
     'reg_alpha' : [1,1.2],
     'reg_lambda' : [1,1.2,1.4],
     }
-grid = GridSearchCV(mdl, gridParams, verbose=1, cv=4, n_jobs=-1)
+lgb_grid = GridSearchCV(mdl, gridParams, verbose=1, cv=4, n_jobs=-1)
 # Run the grid
-grid.fit(X_train_res, y_train_res.ravel())
+lgb_grid.fit(X_train_res, y_train_res.ravel())
 
-params['colsample_bytree'] = grid.best_params_['colsample_bytree']
-params['learning_rate'] = grid.best_params_['learning_rate'] 
-params['max_bin'] = grid.best_params_['max_bin']
-params['num_leaves'] = grid.best_params_['num_leaves']
-params['reg_alpha'] = grid.best_params_['reg_alpha']
-params['reg_lambda'] = grid.best_params_['reg_lambda']
-params['subsample'] = grid.best_params_['subsample']
-
-lgb_model = lgb.train(params, train_ds, 1000, test_ds, verbose_eval=100, early_stopping_rounds=100)
-
-predict_train = lgb_model.predict(X_train_res)
-predict_test = lgb_model.predict(x_test)
+# params['colsample_bytree'] = grid.best_params_['colsample_bytree']
+# params['learning_rate'] = grid.best_params_['learning_rate'] 
+# params['max_bin'] = grid.best_params_['max_bin']
+# params['num_leaves'] = grid.best_params_['num_leaves']
+# params['reg_alpha'] = grid.best_params_['reg_alpha']
+# params['reg_lambda'] = grid.best_params_['reg_lambda']
+# params['subsample'] = grid.best_params_['subsample']
 
 
-acc_lgb = round( metrics.accuracy_score(predict_test.round(), y_test) , 3 )
+light_grid = lgb_grid.best_estimator_
+# Train the model using the training sets 
+light_grid.fit(X_train_res, y_train_res.ravel())
+
+# Prediction on test data
+y_pred_ada = light_grid.predict(X_test)
+
+
+# lgb_model = lgb.train(params, train_ds, 1000, test_ds, verbose_eval=100, early_stopping_rounds=100)
+
+# predict_train = lgb_model.predict(X_train_res)
+# predict_test = lgb_model.predict(x_test)
+
+
+acc_lgb = round( metrics.accuracy_score(y_pred_ada.round(), y_test) , 3 )
 print( 'Accuracy of LGB model : ', acc_lgb )
 
-f1_lgb=f1_score(y_test, predict_test.round(), average='weighted')
-roc_lgb=np.round(roc_auc_score(y_test, predict_test.round(), average='weighted'), decimals=4)
+f1_lgb=f1_score(y_test, y_pred_ada.round(), average='weighted')
+roc_lgb=np.round(roc_auc_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
 
-# report_with_auc = class_report(
-#     y_true=y_test, 
-#     y_pred=lgb_model.predict(X_test), 
-#     y_score=lgb_model.predict_proba(X_test))
-
-# print(report_with_auc)
 print('f1 score: ', f1_lgb)
 print('auc  score: ', roc_lgb)
 
 
-recall_lgb = np.round(recall_score(y_test, predict_test.round(), average='weighted'), decimals=4)
-precis_lgb = np.round(precision_score(y_test, predict_test.round(), average='weighted'), decimals=4)
+recall_lgb = np.round(recall_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
+precis_lgb = np.round(precision_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
 
 print('recall score: ', recall_lgb)
 print('precision  score: ', precis_lgb)
 
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_ada.round())
 
 
-
-ax = lgb.plot_importance(lgb_model, max_num_features=14, figsize=(10,10))
+ax = lgb.plot_importance(light_grid, max_num_features=18, figsize=(10,10))
 plt.show()
 #%%
 import graphviz 
@@ -721,7 +667,7 @@ export_graphviz(estimator, out_file='tree_rf.dot',
                 rounded=True, # 박스의 모양을 둥글게
                )
 
-dot_data = lgb.create_tree_digraph(lgb_model, tree_index = 1,show_info=['split_gain'])
+dot_data = lgb.create_tree_digraph(light_grid, tree_index = 1,show_info=['split_gain'])
 
 graph = graphviz.Source(dot_data)  
 graph 
@@ -762,18 +708,23 @@ acc_xgb = round( metrics.accuracy_score(y_pred_xgb.round(), y_test) , 3 )
 print( 'Accuracy of XGB model : ', acc_xgb )
 #mse_xgb = mean_squared_error(y_test, y_pred_xgb.round())
 #r2_xgb= r2_score(y_test, y_pred_xgb.round())
+
 f1_xgb=f1_score(y_test, y_pred_xgb.round(), average='weighted')
-roc_xgb=np.round(roc_auc_score(y_test, y_pred_xgb.round(), average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=search.predict(X_test), 
-    y_score=search.predict_proba(X_test))
-print(report_with_auc)
+roc_cat=np.round(roc_auc_score(y_test, y_pred_xgb.round(), average='weighted'), decimals=4)
+
 print('f1 score: ', f1_xgb)
-print('auc  score: ', roc_xgb)
+print('auc  score: ', roc_cat)
+
+recall_xgb = np.round(recall_score(y_test, y_pred_xgb.round(), average='weighted'), decimals=4)
+precis_xgb= np.round(precision_score(y_test, y_pred_xgb.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_xgb)
+print('precision  score: ', precis_xgb)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_xgb)
 #%%
 #adaboost
-from sklearn.ensemble import AdaBoostClassifier
+
 n_estimators = [100,140,145,150,160, 170,175,180,185];
 cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
 learning_r = [0.1,1,0.01,0.5]
@@ -800,42 +751,65 @@ y_pred_ada = adaBoost_grid.predict(X_test)
 # Calculating the accuracy
 acc_ada = round( metrics.accuracy_score(y_pred_ada.round(), y_test) , 3 )
 print( 'Accuracy of AdaBoost model : ', acc_ada )
-#mse_ada = mean_squared_error(y_test, y_pred_ada.round())
-#r2_ada= r2_score(y_test, y_pred_ada.round())
+
 f1_ada=f1_score(y_test, y_pred_ada.round(), average='weighted')
 roc_ada=np.round(roc_auc_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=adaBoost_grid.predict(X_test), 
-    y_score=adaBoost_grid.predict_proba(X_test))
-print(report_with_auc)
+
+print('f1 score: ', f1_ada)
+print('auc  score: ', roc_ada)
+
+recall_ada = np.round(recall_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
+precis_ada = np.round(precision_score(y_test, y_pred_ada.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_ada)
+print('precision  score: ', precis_ada)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_ada)
+
 
 #%%
-voting_estimators = [('rf', grid_obj),('xgb', search),('ada', grid),("log",grid_log)]
+clf = CatBoostClassifier()
+params = {'iterations': [500],
+          'depth': [4, 5, 6],
+          'loss_function': ['Logloss', 'CrossEntropy'],
+          'l2_leaf_reg': np.logspace(-20, -19, 3),
+          'leaf_estimation_iterations': [10],
+#           'eval_metric': ['Accuracy'],
+#           'use_best_model': ['True'],
+          'logging_level':['Silent'],
+          'random_seed': [42]
+         }
+scorer = make_scorer(accuracy_score)
+clf_grid = GridSearchCV(estimator=clf, param_grid=params, scoring=scorer, cv=5,n_jobs=-1)
+clf_grid.fit(X_train_res, y_train_res.ravel())
 
-estimators_with_names = [(name, grid_search.best_estimator_) for name, grid_search in voting_estimators]
 
-voting_classifier = VotingClassifier(estimators=estimators_with_names,voting='soft')
+cat_grid = clf_grid.best_estimator_
+# Train the model using the training sets 
+cat_grid.fit(X_train_res, y_train_res.ravel())
 
-voting_classifier.fit(X_train, y_train)
-voting_classifier.score(X_test, y_test)
-y_pred_voting = voting_classifier.predict(X_test)
-acc_voting = round( metrics.accuracy_score(y_pred_voting.round(), y_test) , 3 )
-print( 'Accuracy of voting_classifier : ', acc_voting )
-r2_voting= r2_score(y_test, y_pred_voting)
-f1_voting=f1_score(y_test, y_pred_voting, average='weighted')
-report_with_auc = class_report(
-    y_true=y_test, 
-    y_pred=voting_classifier.predict(X_test), 
-    y_score=voting_classifier.predict_proba(X_test))
+# Prediction on test data
+y_pred_cat = cat_grid.predict(X_test)
+
+acc_cat = round( metrics.accuracy_score(y_pred_cat.round(), y_test) , 3 )
+print( 'Accuracy of CATBoost model : ', acc_cat )
+
+f1_cat=f1_score(y_test, y_pred_cat.round(), average='weighted')
+roc_cat=np.round(roc_auc_score(y_test, y_pred_cat.round(), average='weighted'), decimals=4)
+
+print('f1 score: ', f1_cat)
+print('auc  score: ', roc_cat)
+
+recall_cat = np.round(recall_score(y_test, y_pred_cat.round(), average='weighted'), decimals=4)
+precis_cat = np.round(precision_score(y_test, y_pred_cat.round(), average='weighted'), decimals=4)
+
+print('recall score: ', recall_cat)
+print('precision  score: ', precis_cat)
+
+skplt.metrics.plot_confusion_matrix(y_test, y_pred_cat)
+
 #%%
-from sklearn.metrics import confusion_matrix
-cm = confusion_matrix(y_test, y_pred_rf)
-print('Confusion matrix\n\n', cm)
-print('\nTrue Positives(TP) = ', cm[0,0])
-print('\nTrue Negatives(TN) = ', cm[1,1])
-print('\nFalse Positives(FP) = ', cm[0,1])
-print('\nFalse Negatives(FN) = ', cm[1,0])
+
 #%%
 # plt.figure(figsize=(15, 4))
 # plt.plot(['Logistic','AdaBoost',"Decision Tree","RandonForest","Support Vector Machines","LightGBM","Xgboost"], [acc_logreg, acc_ada,acc_dt, acc_rf, acc_svm, acc_lgb,acc_xgb], 'ro')
