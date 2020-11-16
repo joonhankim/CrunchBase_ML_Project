@@ -423,7 +423,7 @@ parameters = {'max_features': ['log2', 'sqrt','auto'],
              }
 
 # Run the grid search
-grid_obj = GridSearchCV(clf, parameters)
+grid_obj = GridSearchCV(clf, parameters,n_jobs=-1)
 grid_obj = grid_obj.fit(X_train_res, y_train_res.ravel())
 
 # Set the clf to the best combination of parameters
