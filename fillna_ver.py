@@ -356,7 +356,18 @@ def model_metrics(y_test,y_pred):
     print('precision  score: ', precis)
     
     skplt.metrics.plot_confusion_matrix(y_test, y_pred.round())
-    
+
+def plot_roc_curve(fpr, tpr, label=None):
+    plt.figure(figsize=(8, 6)) 
+    plt.plot(fpr, tpr, linewidth=2, label=label, color='red')
+    plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
+    plt.axis([0, 1, 0, 1])
+    plt.title('Receiver Operating Curve(ROC)', fontsize=18)
+    plt.xlabel('False Positive Rate (Fall-Out)', fontsize=16) 
+    plt.ylabel('True Positive Rate (Recall)', fontsize=16)
+    #plt.legend(True)
+    plt.grid(True)
+    plt.show()
     
 #%%
 # Create a Logistic regression classifier
@@ -374,6 +385,8 @@ logreg_2.fit(X_train_res, y_train_res.ravel())
 # Prediction on test data
 y_pred_LF = logreg_2.predict(X_test)
 model_metrics(y_test,y_pred_LF)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_LF) 
+plot_roc_curve(fpr, tpr)
 #%%
 parameters = {
     "loss":["deviance"],
@@ -396,7 +409,8 @@ print(clf.best_params_)
 y_pred_gb= clf.predict(X_test)
 
 model_metrics(y_test,y_pred_gb)
-
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
+plot_roc_curve(fpr, tpr)
 #%%
 # Create a Decision tree classifier model
 clf = DecisionTreeClassifier()
@@ -421,6 +435,8 @@ clf.fit(X_train_res, y_train_res.ravel())
 y_pred_dt= clf.predict(X_test)
 # Calculating the accuracy
 model_metrics(y_test,y_pred_dt)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_dt) 
+plot_roc_curve(fpr, tpr)
 #%%
 #tree visualization
 from sklearn.tree import export_graphviz
@@ -462,6 +478,8 @@ y_pred_rf = rf.predict(X_test)
 
 # Calculating the accuracy
 model_metrics(y_test,y_pred_rf)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_rf) 
+plot_roc_curve(fpr, tpr)
 
 featureImpList= []
 for feat, importance in zip(X_train_res.columns, rf.feature_importances_):  
@@ -532,15 +550,6 @@ lgb_grid = GridSearchCV(mdl, gridParams, verbose=1, cv=4, n_jobs=-1)
 # Run the grid
 lgb_grid.fit(X_train_res, y_train_res.ravel())
 
-# params['colsample_bytree'] = grid.best_params_['colsample_bytree']
-# params['learning_rate'] = grid.best_params_['learning_rate'] 
-# params['max_bin'] = grid.best_params_['max_bin']
-# params['num_leaves'] = grid.best_params_['num_leaves']
-# params['reg_alpha'] = grid.best_params_['reg_alpha']
-# params['reg_lambda'] = grid.best_params_['reg_lambda']
-# params['subsample'] = grid.best_params_['subsample']
-
-
 light_grid = lgb_grid.best_estimator_
 # Train the model using the training sets 
 light_grid.fit(X_train_res, y_train_res.ravel())
@@ -548,15 +557,9 @@ light_grid.fit(X_train_res, y_train_res.ravel())
 # Prediction on test data
 y_pred_light = light_grid.predict(X_test)
 
-
-# lgb_model = lgb.train(params, train_ds, 1000, test_ds, verbose_eval=100, early_stopping_rounds=100)
-
-# predict_train = lgb_model.predict(X_train_res)
-# predict_test = lgb_model.predict(x_test)
-
-
 model_metrics(y_test,y_pred_light)
-
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_light) 
+plot_roc_curve(fpr, tpr)
 
 ax = lgb.plot_importance(light_grid, max_num_features=18, figsize=(10,10))
 plt.show()
@@ -609,6 +612,8 @@ y_pred_xgb= search.predict(X_test)
 
 # Calculating the accuracy
 model_metrics(y_test,y_pred_xgb)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_xgb) 
+plot_roc_curve(fpr, tpr)
 #%%
 #adaboost
 
@@ -637,7 +642,8 @@ y_pred_ada = adaBoost_grid.predict(X_test)
 
 # Calculating the accuracy
 model_metrics(y_test,y_pred_ada)
-
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_ada) 
+plot_roc_curve(fpr, tpr)
 
 #%%
 clf = CatBoostClassifier()
@@ -664,6 +670,8 @@ cat_grid.fit(X_train_res, y_train_res.ravel())
 y_pred_cat = cat_grid.predict(X_test)
 
 model_metrics(y_test,y_pred_cat)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_cat) 
+plot_roc_curve(fpr, tpr)
 
 #%%
 
