@@ -393,11 +393,11 @@ parameters = {
     "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
     "min_samples_split": np.linspace(0.1, 0.5, 12),
     "min_samples_leaf": np.linspace(0.1, 0.5, 12),
-    "max_depth":[3,5,8],
+    "max_depth":[6,9,12,15],
     "max_features":["log2","sqrt"],
     "criterion": ["friedman_mse",  "mae"],
     "subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "n_estimators":[10]
+    "n_estimators":[10,15,20]
     }
 
 clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
@@ -417,7 +417,7 @@ clf = DecisionTreeClassifier()
 # Hyperparameter Optimization
 parameters = {'max_features': ['log2', 'sqrt','auto'], 
               'criterion': ['entropy', 'gini'],
-              'max_depth': [2, 3, 5, 10, 50], 
+              'max_depth': [5, 10,15,20,25,30], 
               'min_samples_split': [2, 3, 50, 100],
               'min_samples_leaf': [1, 5, 8, 10]
              }
@@ -455,10 +455,10 @@ export_graphviz(clf, out_file='tree_dong_dt.dot',
 rf = RandomForestClassifier()
 
 # Hyperparameter Optimization
-parameters = {'n_estimators': [4, 6, 9, 10, 15], 
+parameters = {'n_estimators': [10,20,30,40,50,60,70,80,90,100], 
               'max_features': ['log2', 'sqrt','auto'], 
               'criterion': ['entropy', 'gini'],
-              'max_depth': [2, 3, 5, 10], 
+              'max_depth': [5, 10,15,20,25,30], 
               'min_samples_split': [2, 3, 5],
               'min_samples_leaf': [1, 5, 8]
              }
@@ -535,7 +535,7 @@ test_ds = lgb.Dataset(x_test, label = y_test)
 
 gridParams = {
     'learning_rate': [0.005, 0.01],
-    'n_estimators': [8,16,24],
+    'n_estimators': [10,20,30,40,50,60,70,80,90,100],
     'num_leaves': [6,8,12,16], 
     'boosting_type' : ['gbdt', 'dart'],
     'objective' : ['binary'],
@@ -564,20 +564,20 @@ plot_roc_curve(fpr, tpr)
 ax = lgb.plot_importance(light_grid, max_num_features=18, figsize=(10,10))
 plt.show()
 #%%
-import graphviz 
-export_graphviz(estimator, out_file='tree_rf.dot', 
-                feature_names = X.columns,
-                class_names = ["0","1"],
-                max_depth = 3, # 표현하고 싶은 최대 depth
-                precision = 3, # 소수점 표기 자릿수
-                filled = True, # class별 color 채우기
-                rounded=True, # 박스의 모양을 둥글게
-               )
+# import graphviz 
+# export_graphviz(estimator, out_file='tree_rf.dot', 
+#                 feature_names = X.columns,
+#                 class_names = ["0","1"],
+#                 max_depth = 3, # 표현하고 싶은 최대 depth
+#                 precision = 3, # 소수점 표기 자릿수
+#                 filled = True, # class별 color 채우기
+#                 rounded=True, # 박스의 모양을 둥글게
+#                )
 
-dot_data = lgb.create_tree_digraph(light_grid, tree_index = 1,show_info=['split_gain'])
+# dot_data = lgb.create_tree_digraph(light_grid, tree_index = 1,show_info=['split_gain'])
 
-graph = graphviz.Source(dot_data)  
-graph 
+# graph = graphviz.Source(dot_data)  
+# graph 
 #%%
 #xgb
 xgb_model = xgb.XGBClassifier()
@@ -597,8 +597,8 @@ params = {
     "colsample_bytree": uniform(0.7, 0.3),
     "gamma": uniform(0, 0.5),
     "learning_rate": uniform(0.03, 0.3), # default 0.1 
-    "max_depth": randint(2, 6), # default 3
-    "n_estimators": randint(100, 150), # default 100
+    "max_depth": -1, # default 3
+    "n_estimators": [10,20,30,40,50,60,70,80,90,100], # default 100
     "subsample": uniform(0.6, 0.4)
 }
 
@@ -617,9 +617,9 @@ plot_roc_curve(fpr, tpr)
 #%%
 #adaboost
 
-n_estimators = [100,140,145,150,160, 170,175,180,185];
+n_estimators = [10,20,30,40,50,60,70,80,90,100];
 cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
-learning_r = [0.1,1,0.01,0.5]
+learning_r = uniform(0.03, 0.3)
 
 parameters = {'n_estimators':n_estimators,
               'learning_rate':learning_r
@@ -648,7 +648,7 @@ plot_roc_curve(fpr, tpr)
 #%%
 clf = CatBoostClassifier()
 params = {'iterations': [500],
-          'depth': [4, 5, 6],
+          'depth': [6,9,12,15],
           'loss_function': ['Logloss', 'CrossEntropy'],
           'l2_leaf_reg': np.logspace(-20, -19, 3),
           'leaf_estimation_iterations': [10],
