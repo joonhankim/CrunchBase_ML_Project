@@ -342,8 +342,8 @@ plt.show()
 #%%
 
 def model_metrics(y_test,y_pred):
-    acc_logreg = round( metrics.accuracy_score(y_test, y_pred) , 3)
-    print( 'Accuracy of Logistic Regression model : ', acc_logreg )
+    acc = round( metrics.accuracy_score(y_test, y_pred) , 3)
+    print( 'Accuracy of  model : ', acc )
     
     
     f1=round(f1_score(y_test, y_pred.round(), average='weighted'),3)
@@ -387,30 +387,7 @@ y_pred_LF = logreg_2.predict(X_test)
 model_metrics(y_test,y_pred_LF)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_LF) 
 plot_roc_curve(fpr, tpr)
-#%%
-parameters = {
-    "loss":["deviance"],
-    "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
-    "min_samples_split": np.linspace(0.1, 0.5, 12),
-    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
-    "max_depth":[6,9,12,15],
-    "max_features":["log2","sqrt"],
-    "criterion": ["friedman_mse",  "mae"],
-    "subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "n_estimators":[10,15,20]
-    }
 
-clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
-
-clf.fit(X_train_res, y_train_res.ravel())
-print(clf.score(X_train_res, y_train_res.ravel()))
-print(clf.best_params_)
-
-y_pred_gb= clf.predict(X_test)
-
-model_metrics(y_test,y_pred_gb)
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
-plot_roc_curve(fpr, tpr)
 #%%
 # Create a Decision tree classifier model
 clf = DecisionTreeClassifier()
@@ -451,11 +428,36 @@ export_graphviz(clf, out_file='tree_dong_dt.dot',
                 rounded=True, # 박스의 모양을 둥글게
                )
 #%%
+#%%
+parameters = {
+    "loss":["deviance"],
+    "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
+    "min_samples_split": np.linspace(0.1, 0.5, 12),
+    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
+    "max_depth":[6,9,12,15],
+    "max_features":["log2","sqrt"],
+    "criterion": ["friedman_mse",  "mae"],
+    "subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
+    "n_estimators":[10,20,30]
+    }
+
+clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
+
+clf.fit(X_train_res, y_train_res.ravel())
+print(clf.score(X_train_res, y_train_res.ravel()))
+print(clf.best_params_)
+
+y_pred_gb= clf.predict(X_test)
+
+model_metrics(y_test,y_pred_gb)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
+plot_roc_curve(fpr, tpr)
+#%%
 # Create a Random Forest Classifier
 rf = RandomForestClassifier()
 
 # Hyperparameter Optimization
-parameters = {'n_estimators': [10,20,30,40,50,60,70,80,90,100], 
+parameters = {'n_estimators': [10,20,30], 
               'max_features': ['log2', 'sqrt','auto'], 
               'criterion': ['entropy', 'gini'],
               'max_depth': [5, 10,15,20,25,30], 
@@ -464,7 +466,7 @@ parameters = {'n_estimators': [10,20,30,40,50,60,70,80,90,100],
              }
 
 # Run the grid search
-grid_obj = GridSearchCV(rf, parameters)
+grid_obj = GridSearchCV(rf, parameters,n_jobs=-1)
 grid_obj = grid_obj.fit(X_train_res, y_train_res.ravel())
 
 # Set the rf to the best combination of parameters
@@ -535,7 +537,7 @@ test_ds = lgb.Dataset(x_test, label = y_test)
 
 gridParams = {
     'learning_rate': [0.005, 0.01],
-    'n_estimators': [10,20,30,40,50,60,70,80,90,100],
+    'n_estimators': [10,20,30],
     'num_leaves': [6,8,12,16], 
     'boosting_type' : ['gbdt', 'dart'],
     'objective' : ['binary'],
@@ -598,7 +600,7 @@ params = {
     "gamma": uniform(0, 0.5),
     "learning_rate": uniform(0.03, 0.3), # default 0.1 
     "max_depth": -1, # default 3
-    "n_estimators": [10,20,30,40,50,60,70,80,90,100], # default 100
+    "n_estimators": [10,20,30], # default 100
     "subsample": uniform(0.6, 0.4)
 }
 
@@ -617,7 +619,7 @@ plot_roc_curve(fpr, tpr)
 #%%
 #adaboost
 
-n_estimators = [10,20,30,40,50,60,70,80,90,100];
+n_estimators = [10,20,30];
 cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
 learning_r = uniform(0.03, 0.3)
 
