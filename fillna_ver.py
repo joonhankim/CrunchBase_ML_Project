@@ -347,7 +347,7 @@ def model_metrics(y_test,y_pred):
     
     
     f1=round(f1_score(y_test, y_pred.round(), average='weighted'),3)
-    roc_score=np.round(roc_auc_score(y_test, y_pred_LF.round(), average='weighted'), decimals=3)
+    roc_score=np.round(roc_auc_score(y_test, y_pred.round(), average='weighted'), decimals=4)
     recall = np.round(recall_score(y_test, y_pred.round(), average='weighted'), decimals=3)
     precis= np.round(precision_score(y_test, y_pred.round(), average='weighted'), decimals=3)
     print('f1 score: ', f1)
@@ -460,7 +460,7 @@ rf = RandomForestClassifier()
 parameters = {'n_estimators': [10,20,30], 
               'max_features': ['log2', 'sqrt','auto'], 
               'criterion': ['entropy', 'gini'],
-              'max_depth': [5, 10,15,20,25,30], 
+              'max_depth': [5, 10,15], 
               'min_samples_split': [2, 3, 5],
               'min_samples_leaf': [1, 5, 8]
              }
@@ -505,7 +505,7 @@ params = {
     'learning_rate': 0.05,
     'num_leaves': 62,
     'device': 'cpu', # you can use GPU to achieve faster learning
-    'max_depth': -1, # <0 means no limit
+    'max_depth': 15, # <0 means no limit
     'max_bin': 510, # Small number of bins may reduce training accuracy but can deal with over-fitting
     'lambda_l1': 5, # L1 regularization
     'lambda_l2': 10, # L2 regularization
@@ -595,16 +595,30 @@ def report_best_scores(results, n_top=3):
             print("Parameters: {0}".format(results['params'][candidate]))
             print("")
             
-params = {
-    "colsample_bytree": uniform(0.7, 0.3),
-    "gamma": uniform(0, 0.5),
-    "learning_rate": uniform(0.03, 0.3), # default 0.1 
-    "max_depth": -1, # default 3
-    "n_estimators": [10,20,30], # default 100
-    "subsample": uniform(0.6, 0.4)
-}
+# params = {
+#     "colsample_bytree": [0.64, 0.65, 0.66],
+#     "gamma": uniform(0, 0.5),
+#     "learning_rate": [0.005, 0.01], # default 0.1 
+#     "max_depth": [15], # default 3
+#     "n_estimators": [10,20,30], # default 100
+#     "subsample": [0.7,0.75]
+# }
+gridParams = {
+    'learning_rate': [0.005, 0.01],
+    'gamma': [0.5, 1, 1.5, 2, 5],
+    'min_child_weight': [1, 5, 10],
+    'n_estimators': [10,20,30],
+    'num_leaves': [6,8,12,16], 
+    'boosting_type' : ['gbdt', 'dart'],
+    'max_bin':[255, 510], 
+    'random_state' : [500],
+    'colsample_bytree' : [0.64, 0.65, 0.66],
+    'subsample' : [0.7,0.75],
+    'reg_alpha' : [1,1.2],
+    'reg_lambda' : [1,1.2,1.4],
+    }
 
-search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=3, verbose=1, n_jobs=-1, return_train_score=True)
+search = RandomizedSearchCV(xgb_model, param_distributions=gridParams, random_state=42, n_iter=200, cv=3, verbose=1, n_jobs=-1, return_train_score=True)
 
 search.fit(X_train_res, y_train_res.ravel())
 
@@ -621,7 +635,7 @@ plot_roc_curve(fpr, tpr)
 
 n_estimators = [10,20,30];
 cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
-learning_r = uniform(0.03, 0.3)
+learning_r = [0.005, 0.01]
 
 parameters = {'n_estimators':n_estimators,
               'learning_rate':learning_r
@@ -649,10 +663,10 @@ plot_roc_curve(fpr, tpr)
 
 #%%
 clf = CatBoostClassifier()
-params = {'iterations': [500],
-          'depth': [6,9,12,15],
+params = {'iterations': [100],
+          'depth': [12,15],
           'loss_function': ['Logloss', 'CrossEntropy'],
-          'l2_leaf_reg': np.logspace(-20, -19, 3),
+          'l2_leaf_reg': [5],
           'leaf_estimation_iterations': [10],
 #           'eval_metric': ['Accuracy'],
 #           'use_best_model': ['True'],
