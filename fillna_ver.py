@@ -427,31 +427,8 @@ export_graphviz(clf, out_file='tree_dong_dt.dot',
                 filled = True, # class별 color 채우기
                 rounded=True, # 박스의 모양을 둥글게
                )
-#%%
-#%%
-parameters = {
-    "loss":["deviance"],
-    "learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
-    "min_samples_split": np.linspace(0.1, 0.5, 12),
-    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
-    "max_depth":[6,9,12,15],
-    "max_features":["log2","sqrt"],
-    "criterion": ["friedman_mse",  "mae"],
-    "subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "n_estimators":[10,20,30]
-    }
 
-clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
 
-clf.fit(X_train_res, y_train_res.ravel())
-print(clf.score(X_train_res, y_train_res.ravel()))
-print(clf.best_params_)
-
-y_pred_gb= clf.predict(X_test)
-
-model_metrics(y_test,y_pred_gb)
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
-plot_roc_curve(fpr, tpr)
 #%%
 # Create a Random Forest Classifier
 rf = RandomForestClassifier()
@@ -690,6 +667,30 @@ fpr, tpr, thresholds = roc_curve(y_test, y_pred_cat)
 plot_roc_curve(fpr, tpr)
 
 #%%
+#%%
+parameters = {
+    "loss":["deviance"],
+    "learning_rate": [0.005, 0.01],
+    "min_samples_split": np.linspace(0.1, 0.5, 12),
+    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
+    "max_depth":[12,15],
+    "max_features":["log2","sqrt"],
+    "criterion": ["friedman_mse",  "mae"],
+    "subsample":[0.7,0.75],
+    "n_estimators":[10,20,30]
+    }
+
+clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
+
+clf.fit(X_train_res, y_train_res.ravel())
+print(clf.score(X_train_res, y_train_res.ravel()))
+print(clf.best_params_)
+
+y_pred_gb= clf.predict(X_test)
+
+model_metrics(y_test,y_pred_gb)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
+plot_roc_curve(fpr, tpr)
 
 #%%
 # plt.figure(figsize=(15, 4))
