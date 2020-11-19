@@ -315,24 +315,25 @@ corr = X_train_res.corr()
 mask = np.triu(np.ones_like(corr, dtype=np.bool))
 
 # Set up the matplotlib figure
-f, ax = plt.subplots(figsize=(11, 9))
+f, ax = plt.subplots(figsize=(15, 15))
 
 # Generate a custom diverging colormap
 cmap = sns.diverging_palette(220, 20, as_cmap=True)
 
 # Draw the heatmap with the mask and correct aspect ratio
 sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
-            square=True, linewidths=.7, cbar_kws={"shrink": .5})
+            square=True, linewidths=.5, cbar_kws={"shrink": .5})
 
 #%%
 sns.distplot(X_train_res, hist=False, kde_kws={'clip': (0.0, 100)})
 plt.show()
 #%%
-sns.distplot(X_train_res["Total Funding Amount"])
+sns.distplot(X_train_res["Number_of_Events"])
+# plt.xlim(0, 300)
 plt.show()
 #%%
-sns.countplot(data = X_train_res, x = 'Total Funding Amount')
-plt.show()
+sns.countplot(data = X_train_res, x = 'Headquarters_Regions')
+
 #%%
 ########################################################################
 #Modeling
@@ -419,7 +420,7 @@ plot_roc_curve(fpr, tpr)
 from sklearn.tree import export_graphviz
 
 #export_graphviz(clf, out_file='tree.dot')
-export_graphviz(clf, out_file='tree_dong_dt.dot', 
+export_graphviz(clf, out_file='tree_WHITE_wine_dt.dot', 
                 feature_names = X.columns,
                 class_names = ["0","1"],
                 max_depth = 2, # 표현하고 싶은 최대 depth
@@ -640,7 +641,7 @@ plot_roc_curve(fpr, tpr)
 
 #%%
 clf = CatBoostClassifier()
-params = {'iterations': [100],
+params = {'iterations': [10],
           'depth': [12,15],
           'loss_function': ['Logloss', 'CrossEntropy'],
           'l2_leaf_reg': [5],
@@ -670,17 +671,17 @@ plot_roc_curve(fpr, tpr)
 #%%
 parameters = {
     "loss":["deviance"],
-    "learning_rate": [0.005, 0.01],
-    "min_samples_split": np.linspace(0.1, 0.5, 12),
-    "min_samples_leaf": np.linspace(0.1, 0.5, 12),
+    "learning_rate": [0.01],
+    # "min_samples_split": np.linspace(0.1, 0.5, 12),
+    # "min_samples_leaf": np.linspace(0.1, 0.5, 12),
     "max_depth":[12,15],
     "max_features":["log2","sqrt"],
     "criterion": ["friedman_mse",  "mae"],
     "subsample":[0.7,0.75],
-    "n_estimators":[10,20,30]
+    "n_estimators":[30]
     }
 
-clf = GridSearchCV(GradientBoostingClassifier(), parameters, cv=10, n_jobs=-1)
+clf = GridSearchCV(GradientBoostingClassifier(), parameters,n_jobs=-1)
 
 clf.fit(X_train_res, y_train_res.ravel())
 print(clf.score(X_train_res, y_train_res.ravel()))
