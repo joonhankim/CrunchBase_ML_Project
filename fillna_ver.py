@@ -53,6 +53,7 @@ from catboost import CatBoostClassifier
 import scikitplot as skplt
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+
 #%%
 #################
 
@@ -204,9 +205,7 @@ document.info()
 document.to_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_do.csv",index=False,encoding='utf8')
 
 document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_do.csv",header=0,encoding="utf8")
-#%%
-#document_fill=document_fill.drop("CB_Rank",axis=1)
-document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
+
 #%%
 
 # document_fill["IT_Spend"] = document_fill["IT_Spend"].astype(float)
@@ -223,7 +222,7 @@ document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 # document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
 # document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
 
-document_fill=document_fill.drop(["Total Equity Funding Amount","Last Funding Date"],axis=1)
+document_fill=document_fill.drop(["Total Equity Funding Amount","Last Funding Date","Number_of_Events","IT_Spend"],axis=1)
 document_fill.info()
 #%%
 
@@ -243,10 +242,25 @@ document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_T
 
 
 
-document_fill.info()
+#%%
+#impute miising values with machine learning method
+# from sklearn.ensemble import RandomForestRegressor
+# data_1=document_fill[["Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount","Last_funding_to_date","Last_Equity_Funding_Type","Last_Equity_Funding_Amount"]]
 
-imputer = KNNImputer(n_neighbors=5)
-document_fill = pd.DataFrame(imputer.fit_transform(document_fill),columns = document_fill.columns)
+# test_data = data_1[data_1["Number_of_Lead_Investors"].isnull()]
+# data_1.dropna(inplace=True)
+
+# y_train = data_1["Number_of_Lead_Investors"]
+# X_train = data_1.drop("Number_of_Lead_Investors", axis=1)
+# X_test = test_data.drop("Number_of_Lead_Investors", axis=1)
+
+# model = RandomForestRegressor(n_jobs=-1)
+# model.fit(X_train, y_train)
+
+# y_pred = model.predict(X_test)
+
+#%%
+
 document_fill.isna().sum()
 document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 #document_fill.to_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do1.csv",index=False,encoding='utf8')
@@ -255,6 +269,24 @@ document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 ####
 X=document_fill.loc[:, document_fill.columns != 'IPO_Status']
 y=document_fill['IPO_Status'] 
+
+document_fill.info()
+document_fill.isna().sum()
+
+
+imputer = KNNImputer(n_neighbors=5)
+X_tech = pd.DataFrame(imputer.fit_transform(X[["Patents_Granted","Active_Tech_Count"]]),columns = ["Patents_Granted","Active_Tech_Count"])
+
+X_merchan = pd.DataFrame(imputer.fit_transform(X[["Total_Products_Active","Trademarks_Registered"]]),columns = ["Total_Products_Active","Trademarks_Registered"])
+
+X_oppur = pd.DataFrame(imputer.fit_transform(X[["Company_Age","LOF_Score","Last_Equity_Funding_Type"]]),columns = ["Company_Age","LOF_Score","Last_Equity_Funding_Type"])
+
+X_fund = pd.DataFrame(imputer.fit_transform(X[["Last_funding_to_date","Last_Equity_Funding_Amount","Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount"]]),columns = ["Last_funding_to_date","Last_Equity_Funding_Amount","Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount"])
+
+X_pop = pd.DataFrame(imputer.fit_transform(X[["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"]]),columns = ["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"])
+
+X = pd.concat([X_tech, X_merchan,X_oppur,X_fund,X_pop],axis=1)
+
 #%%
 ########################################################################
 #Oversampling
@@ -681,13 +713,16 @@ parameters = {
     "n_estimators":[30]
     }
 
-clf = GridSearchCV(GradientBoostingClassifier(), parameters,n_jobs=-1)
+clf_gb = GridSearchCV(GradientBoostingClassifier(), parameters,n_jobs=-1)
+clf_gb.fit(X_train_res, y_train_res.ravel())
 
-clf.fit(X_train_res, y_train_res.ravel())
-print(clf.score(X_train_res, y_train_res.ravel()))
-print(clf.best_params_)
 
-y_pred_gb= clf.predict(X_test)
+clf_gb_best = clf_gb.best_estimator_
+clf_gb_best.fit(X_train_res, y_train_res.ravel())
+# print(clf.score(X_train_res, y_train_res.ravel()))
+# print(clf.best_params_)
+
+y_pred_gb= clf_gb_best.predict(X_test)
 
 model_metrics(y_test,y_pred_gb)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
