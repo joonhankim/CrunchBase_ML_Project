@@ -594,25 +594,7 @@ plt.show()
 #xgb
 xgb_model = xgb.XGBClassifier()
 
-def report_best_scores(results, n_top=3):
-    for i in range(1, n_top + 1):
-        candidates = np.flatnonzero(results['rank_test_score'] == i)
-        for candidate in candidates:
-            print("Model with rank: {0}".format(i))
-            print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
-                  results['mean_test_score'][candidate],
-                  results['std_test_score'][candidate]))
-            print("Parameters: {0}".format(results['params'][candidate]))
-            print("")
-            
-# params = {
-#     "colsample_bytree": [0.64, 0.65, 0.66],
-#     "gamma": uniform(0, 0.5),
-#     "learning_rate": [0.005, 0.01], # default 0.1 
-#     "max_depth": [15], # default 3
-#     "n_estimators": [10,20,30], # default 100
-#     "subsample": [0.7,0.75]
-# }
+
 gridParams = {
     'learning_rate': [0.005, 0.01],
     'gamma': [0.5, 1, 1.5, 2, 5],
@@ -628,18 +610,25 @@ gridParams = {
     'reg_lambda' : [1,1.2,1.4],
     }
 
-search = RandomizedSearchCV(xgb_model, param_distributions=gridParams, random_state=42, n_iter=200, cv=3, verbose=1, n_jobs=-1, return_train_score=True)
+search = GridSearchCV(xgb_model,gridParams,cv=3, verbose=1, n_jobs=-1)
 
 search.fit(X_train_res, y_train_res.ravel())
 
-report_best_scores(search.cv_results_, 1)
+xgb_grid = search.best_estimator_
 
-y_pred_xgb= search.predict(X_test)
+y_pred_xgb= xgb_grid.predict(X_test)
 
 # Calculating the accuracy
 model_metrics(y_test,y_pred_xgb)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_xgb) 
 plot_roc_curve(fpr, tpr)
+
+#xgb feature importance
+
+fig, ax = plt.subplots(figsize=(10,10))
+xgb.plot_importance(xgb_grid, max_num_features=10, height=0.5, ax=ax,importance_type='gain')
+plt.show()
+
 #%%
 #adaboost
 
