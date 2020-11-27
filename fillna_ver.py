@@ -365,7 +365,9 @@ sns.distplot(X_train_res["Number_of_Events"])
 plt.show()
 #%%
 sns.countplot(data = X_train_res, x = 'Headquarters_Regions')
-
+#%%
+pearsoncorr =X_train_res.corr(method ='pearson')
+pearsoncorr 
 #%%
 ########################################################################
 #Modeling
