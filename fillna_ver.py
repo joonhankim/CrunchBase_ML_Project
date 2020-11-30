@@ -197,7 +197,7 @@ document.info()
 
 
 
-#document_fill = document.fillna(0)
+
 
 
 ###remove , in excel####
@@ -208,22 +208,9 @@ document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_d
 
 #%%
 
-# document_fill["IT_Spend"] = document_fill["IT_Spend"].astype(float)
-# document_fill["IT_Spend"].describe()
-
-# for i in range(len(document_fill)):
-#     if document_fill["IT_Spend"][i] >= 163970.969946:
-#         document_fill["IT_Spend"][i] = 1
-#     else:
-#         document_fill["IT_Spend"][i] = 0
-#%%
-# document_fill["Estimated_Revenue_Range"] =document_fill["Estimated_Revenue_Range"].astype('category')
-# document_fill["Last_Equity_Funding_Type"] =document_fill["Last_Equity_Funding_Type"].astype('category')
-# document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
-# document_fill["Visit_Duration"] = document_fill["Visit_Duration"].astype(float)
-
 document_fill=document_fill.drop(["Total Equity Funding Amount","Last Funding Date","Number_of_Events","IT_Spend"],axis=1)
 document_fill.info()
+#document_fill = document_fill.fillna(0)
 #%%
 
 
@@ -233,31 +220,10 @@ document_fill["Last_Equity_Funding_Type"].replace(to_replace=['Angel', 'Corporat
 
 
 document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_Type"].astype(float)
-# document_fill['Estimated_Revenue_Range'] = document_fill['Estimated_Revenue_Range'].astype('category')
-# document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_Type"].astype('category')
-
-
-# document_fill = pd.concat([document_fill.drop('Estimated_Revenue_Range', axis=1), pd.get_dummies(document_fill['Estimated_Revenue_Range'],prefix="Estimated_Revenue_Range")], axis=1)
-# document_fill = pd.concat([document_fill.drop('Last_Equity_Funding_Type', axis=1), pd.get_dummies(document_fill['Last_Equity_Funding_Type'],prefix="Last_Equity_Funding_Type")], axis=1)
 
 
 
-#%%
-#impute miising values with machine learning method
-# from sklearn.ensemble import RandomForestRegressor
-# data_1=document_fill[["Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount","Last_funding_to_date","Last_Equity_Funding_Type","Last_Equity_Funding_Amount"]]
 
-# test_data = data_1[data_1["Number_of_Lead_Investors"].isnull()]
-# data_1.dropna(inplace=True)
-
-# y_train = data_1["Number_of_Lead_Investors"]
-# X_train = data_1.drop("Number_of_Lead_Investors", axis=1)
-# X_test = test_data.drop("Number_of_Lead_Investors", axis=1)
-
-# model = RandomForestRegressor(n_jobs=-1)
-# model.fit(X_train, y_train)
-
-# y_pred = model.predict(X_test)
 
 #%%
 
@@ -275,6 +241,7 @@ document_fill.isna().sum()
 
 
 imputer = KNNImputer(n_neighbors=5)
+
 X_tech = pd.DataFrame(imputer.fit_transform(X[["Patents_Granted","Active_Tech_Count"]]),columns = ["Patents_Granted","Active_Tech_Count"])
 
 X_merchan = pd.DataFrame(imputer.fit_transform(X[["Total_Products_Active","Trademarks_Registered"]]),columns = ["Total_Products_Active","Trademarks_Registered"])
@@ -286,6 +253,8 @@ X_fund = pd.DataFrame(imputer.fit_transform(X[["Last_funding_to_date","Last_Equi
 X_pop = pd.DataFrame(imputer.fit_transform(X[["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"]]),columns = ["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"])
 
 X = pd.concat([X_tech, X_merchan,X_oppur,X_fund,X_pop],axis=1)
+
+
 
 #%%
 ########################################################################
@@ -366,8 +335,12 @@ plt.show()
 #%%
 sns.countplot(data = X_train_res, x = 'Headquarters_Regions')
 #%%
-pearsoncorr =X_train_res.corr(method ='pearson')
-pearsoncorr 
+import seaborn as sns
+corr = X_train.corr()
+sns.heatmap(corr, 
+            xticklabels=corr.columns.values,
+            yticklabels=corr.columns.values, cmap="YlGnBu")
+
 #%%
 ########################################################################
 #Modeling
@@ -454,7 +427,7 @@ plot_roc_curve(fpr, tpr)
 from sklearn.tree import export_graphviz
 
 #export_graphviz(clf, out_file='tree.dot')
-export_graphviz(clf, out_file='tree_WHITE_wine_dt.dot', 
+export_graphviz(clf, out_file='tree_daewoong_dt.dot', 
                 feature_names = X.columns,
                 class_names = ["0","1"],
                 max_depth = 2, # 표현하고 싶은 최대 depth
