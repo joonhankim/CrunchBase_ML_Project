@@ -208,6 +208,8 @@ document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_d
 
 #%%
 
+document_fill.isna.sum()
+#%%
 document_fill=document_fill.drop(["Total Equity Funding Amount","Last Funding Date","Number_of_Events","IT_Spend"],axis=1)
 document_fill.info()
 #document_fill = document_fill.fillna(0)
@@ -285,6 +287,9 @@ print("After OverSampling, counts of label '1': {}".format(sum(y_train_res==1)))
 print("After OverSampling, counts of label '0': {}".format(sum(y_train_res==0)))
 
 
+plt.hist(y_train)
+plt.draw()
+
 plt.hist(y_train_res)
 plt.draw()
 
@@ -329,11 +334,12 @@ sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
 sns.distplot(X_train_res, hist=False, kde_kws={'clip': (0.0, 100)})
 plt.show()
 #%%
-sns.distplot(X_train_res["Number_of_Events"])
-# plt.xlim(0, 300)
+sns.distplot(X_train_res["Estimated_Revenue_Range"])
+#plt.xlim(0, 200)
+plt.ylim(0, None)
 plt.show()
 #%%
-sns.countplot(data = X_train_res, x = 'Headquarters_Regions')
+sns.countplot(data = X_train_res, x = 'Last_Equity_Funding_Type')
 #%%
 import seaborn as sns
 corr = X_train.corr()

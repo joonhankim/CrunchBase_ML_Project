@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Nov 29 21:38:29 2020
+Created on Fri Nov 27 17:05:04 2020
 
 @author: eric
 """
-
-
-
 #%%
 import pandas as pd
 import numpy as np
@@ -53,10 +50,10 @@ from catboost import CatBoostClassifier
 import scikitplot as skplt
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score
+
 #%%
 
-document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepapa.csv",header=0,encoding="utf8")
+document_fill = pd.read_csv(r"C:\Users\eric\Desktop\CrunchBase_ML_Project\sepa_do.csv",header=0,encoding="utf8")
 
 #%%
 
@@ -116,7 +113,7 @@ document_fill["Last_Equity_Funding_Type"] = document_fill["Last_Equity_Funding_T
 document_fill.isna().sum()
 document_fill["IPO_Status"] = document_fill["IPO_Status"].astype("category")
 #document_fill.to_csv(r"C:\Users\eric\Desktop\cb_ml\sepa_do1.csv",index=False,encoding='utf8')
-#document_fill=document_fill.drop(["LOF_Score"],axis=1)
+
 #%%
 ####
 X=document_fill.loc[:, document_fill.columns != 'IPO_Status']
@@ -127,23 +124,17 @@ document_fill.isna().sum()
 
 
 imputer = KNNImputer(n_neighbors=5)
+X_tech = pd.DataFrame(imputer.fit_transform(X[["Patents_Granted","Active_Tech_Count"]]),columns = ["Patents_Granted","Active_Tech_Count"])
 
-X_tech_merchan = pd.DataFrame(imputer.fit_transform(X[["Patents_Granted","Active_Tech_Count","Total_Products_Active","Trademarks_Registered"]]),columns = ["Patents_Granted","Active_Tech_Count","Total_Products_Active","Trademarks_Registered"])
+X_merchan = pd.DataFrame(imputer.fit_transform(X[["Total_Products_Active","Trademarks_Registered"]]),columns = ["Total_Products_Active","Trademarks_Registered"])
 
-# X_merchan = pd.DataFrame(imputer.fit_transform(X[["Total_Products_Active","Trademarks_Registered"]]),columns = ["Total_Products_Active","Trademarks_Registered"])
-
-# X_oppur = pd.DataFrame(imputer.fit_transform(X[["Company_Age","LOF_Score","Last_Equity_Funding_Type"]]),columns = ["Company_Age","LOF_Score","Last_Equity_Funding_Type"])
-
-X_oppur = pd.DataFrame(imputer.fit_transform(X[["Company_Age","Last_Equity_Funding_Type"]]),columns = ["Company_Age","Last_Equity_Funding_Type"])
-
+X_oppur = pd.DataFrame(imputer.fit_transform(X[["Company_Age","LOF_Score","Last_Equity_Funding_Type"]]),columns = ["Company_Age","LOF_Score","Last_Equity_Funding_Type"])
 
 X_fund = pd.DataFrame(imputer.fit_transform(X[["Last_funding_to_date","Last_Equity_Funding_Amount","Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount"]]),columns = ["Last_funding_to_date","Last_Equity_Funding_Amount","Number_of_Lead_Investors","Estimated_Revenue_Range","Total_Funding_Amount"])
 
 X_pop = pd.DataFrame(imputer.fit_transform(X[["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"]]),columns = ["Average_Visits","Visit_Duration","Number_of_Articles","Headquarters_Regions"])
 
-X = pd.concat([X_tech_merchan,X_oppur,X_fund,X_pop],axis=1)
-
-
+X = pd.concat([X_tech, X_merchan,X_oppur,X_fund,X_pop],axis=1)
 
 #%%
 ########################################################################
@@ -164,75 +155,12 @@ print("Before OverSampling, counts of label '0': {} \n".format(sum(y_train==0)))
 print("Before OverSampling, counts of label '1': {}".format(sum(y_test==1)))
 print("Before OverSampling, counts of label '0': {} \n".format(sum(y_test==0)))
 
-sm = SMOTE(random_state=2,k_neighbors=5)
-X_train_res, y_train_res = sm.fit_sample(X_train, y_train.ravel())
 
-
-
-print('After OverSampling, the shape of train_X: {}'.format(X_train_res.shape))
-print('After OverSampling, the shape of train_y: {} \n'.format(y_train_res.shape))
-
-print("After OverSampling, counts of label '1': {}".format(sum(y_train_res==1)))
-print("After OverSampling, counts of label '0': {}".format(sum(y_train_res==0)))
-
-
-plt.hist(y_train_res)
+plt.hist(y_train)
 plt.draw()
 
 
 
-#%%
-
-########################################################################
-#EDA
-########################################################################
-
-
-X_train_res.hist(figsize=(15,15)) 
-#np.log(X_train_res["IPqwery - Patents Granted"]).plot.hist
-plt.tight_layout()
-plt.draw()
-
-sns.set(style="white")
-
-# Generate a large random dataset
-rs = np.random.RandomState(42)
-
-
-# Compute the correlation matrix
-corr = X_train_res.corr()
-
-
-# Generate a mask for the upper triangle
-mask = np.triu(np.ones_like(corr, dtype=np.bool))
-
-# Set up the matplotlib figure
-f, ax = plt.subplots(figsize=(15, 15))
-
-# Generate a custom diverging colormap
-cmap = sns.diverging_palette(220, 20, as_cmap=True)
-
-# Draw the heatmap with the mask and correct aspect ratio
-sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
-            square=True, linewidths=.5, cbar_kws={"shrink": .5})
-
-#%%
-sns.distplot(X_train_res, hist=False, kde_kws={'clip': (0.0, 100)})
-plt.show()
-#%%
-sns.distplot(X_train_res["Number_of_Events"])
-# plt.xlim(0, 300)
-plt.show()
-#%%
-sns.countplot(data = X_train_res, x = 'Headquarters_Regions')
-#%%
-# pearsoncorr =X_train_res.corr(method ='pearson')
-# pearsoncorr 
-
-rs = np.random.RandomState(0)
-df = pd.DataFrame(rs.rand(10, 10))
-pearsoncorr =X_train_res.corr(method ='pearson')
-pearsoncorr.style.background_gradient(cmap='coolwarm')
 #%%
 ########################################################################
 #Modeling
@@ -270,27 +198,23 @@ def plot_roc_curve(fpr, tpr, label=None):
     plt.show()
     
 #%%
-
-#%%
 # Create a Logistic regression classifier
 logreg = LogisticRegression()
 
 grid={"C":np.logspace(-4, 4, 50), "penalty":["l1","l2"]}
 grid_log=GridSearchCV(logreg,grid,cv=10)
 # Train the model using the training sets 
-grid_log.fit(X_train_res, y_train_res.ravel())
+grid_log.fit(X_train, y_train)
 print("tuned hpyerparameters :(best parameters) ",grid_log.best_params_)
 print("accuracy :",grid_log.best_score_)
 
 logreg_2 = LogisticRegression(C=0.0001,penalty='l2')
-logreg_2.fit(X_train_res, y_train_res.ravel())
+logreg_2.fit(X_train, y_train)
 # Prediction on test data
 y_pred_LF = logreg_2.predict(X_test)
 model_metrics(y_test,y_pred_LF)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_LF) 
 plot_roc_curve(fpr, tpr)
-
-
 
 #%%
 # Create a Decision tree classifier model
@@ -305,30 +229,25 @@ parameters = {'max_features': ['log2', 'sqrt','auto'],
 
 # Run the grid search
 grid_obj = GridSearchCV(clf, parameters,n_jobs=-1)
-grid_obj = grid_obj.fit(X_train, y_train.ravel())
+grid_obj = grid_obj.fit(X_train, y_train)
 
 # Set the clf to the best combination of parameters
 clf = grid_obj.best_estimator_
 
 # Train the model using the training sets 
-clf.fit(X_train_res, y_train_res.ravel())
+clf.fit(X_train, y_train)
 # Prediction on test set
 y_pred_dt= clf.predict(X_test)
 # Calculating the accuracy
 model_metrics(y_test,y_pred_dt)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_dt) 
 plot_roc_curve(fpr, tpr)
-
-
-
-
-
 #%%
 #tree visualization
 from sklearn.tree import export_graphviz
 
 #export_graphviz(clf, out_file='tree.dot')
-export_graphviz(clf, out_file='tree_daewoong1_dt.dot', 
+export_graphviz(clf, out_file='tree_WHITE_wine_dt.dot', 
                 feature_names = X.columns,
                 class_names = ["0","1"],
                 max_depth = 2, # 표현하고 싶은 최대 depth
@@ -353,14 +272,14 @@ parameters = {'n_estimators': [10,20,30],
 
 # Run the grid search
 grid_obj = GridSearchCV(rf, parameters,n_jobs=-1)
-grid_obj = grid_obj.fit(X_train, y_train.ravel())
+grid_obj = grid_obj.fit(X_train, y_train)
 
 # Set the rf to the best combination of parameters
 rf = grid_obj.best_estimator_
 
 # Train the model using the training sets 
-rf.fit(X_train_res, y_train_res.ravel())
-
+rf.fit(X_train, y_train)
+estimator = rf.estimators_[3]
 # Prediction on test data
 y_pred_rf = rf.predict(X_test)
 
@@ -370,7 +289,7 @@ fpr, tpr, thresholds = roc_curve(y_test, y_pred_rf)
 plot_roc_curve(fpr, tpr)
 
 featureImpList= []
-for feat, importance in zip(X_train_res.columns, rf.feature_importances_):  
+for feat, importance in zip(X_train.columns, rf.feature_importances_):  
     temp = [feat, importance*100]
     featureImpList.append(temp)
 
@@ -378,7 +297,7 @@ fT_df = pd.DataFrame(featureImpList, columns = ['Feature', 'Importance'])
 print (fT_df.sort_values('Importance', ascending = False))
 #%%
 svc = StandardScaler()
-X_train_scaled = svc.fit_transform(X_train_res)
+X_train_scaled = svc.fit_transform(X_train)
 X_test_scaled = svc.transform(X_test)
 
 #%%
@@ -416,10 +335,10 @@ mdl = lgb.LGBMClassifier(boosting_type= 'gbdt',
           min_child_weight = params['min_child_weight'], 
           min_child_samples = params['min_child_samples'])
 
-#x_train = svc.fit_transform(X_train_res)
-#x_test = svc.transform(X_test)
-#train_ds = lgb.Dataset(x_train, label = y_train_res.ravel()) 
-#test_ds = lgb.Dataset(x_test, label = y_test) 
+x_train = svc.fit_transform(X_train)
+x_test = svc.transform(X_test)
+train_ds = lgb.Dataset(x_train, label = y_train) 
+test_ds = lgb.Dataset(x_test, label = y_test) 
 
 gridParams = {
     'learning_rate': [0.005, 0.01],
@@ -436,11 +355,11 @@ gridParams = {
     }
 lgb_grid = GridSearchCV(mdl, gridParams, verbose=1, cv=4, n_jobs=-1)
 # Run the grid
-lgb_grid.fit(X_train, y_train.ravel())
+lgb_grid.fit(X_train, y_train)
 
 light_grid = lgb_grid.best_estimator_
 # Train the model using the training sets 
-light_grid.fit(X_train_res, y_train_res.ravel())
+light_grid.fit(X_train, y_train)
 
 # Prediction on test data
 y_pred_light = light_grid.predict(X_test)
@@ -449,10 +368,8 @@ model_metrics(y_test,y_pred_light)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_light) 
 plot_roc_curve(fpr, tpr)
 
-# ax = lgb.plot_importance(light_grid, max_num_features=18, figsize=(10,10))
-# plt.show()
-
-
+ax = lgb.plot_importance(light_grid, max_num_features=18, figsize=(10,10))
+plt.show()
 #%%
 # import graphviz 
 # export_graphviz(estimator, out_file='tree_rf.dot', 
@@ -488,13 +405,11 @@ gridParams = {
     'reg_lambda' : [1,1.2,1.4],
     }
 
-search = GridSearchCV(xgb_model,gridParams,cv=5, verbose=1, n_jobs=-1)
+search = GridSearchCV(xgb_model,gridParams,cv=3, verbose=1, n_jobs=-1)
 
-search.fit(X_train, y_train.ravel())
+search.fit(X_train, y_train)
 
 xgb_grid = search.best_estimator_
-
-xgb_grid.fit(X_train_res, y_train_res.ravel())
 
 y_pred_xgb= xgb_grid.predict(X_test)
 
@@ -509,13 +424,11 @@ fig, ax = plt.subplots(figsize=(10,10))
 xgb.plot_importance(xgb_grid, max_num_features=10, height=0.5, ax=ax,importance_type='gain')
 plt.show()
 
-
-
 #%%
 #adaboost
 
 n_estimators = [10,20,30];
-#cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
+cv = StratifiedShuffleSplit(n_splits=10, test_size=.30, random_state=42)
 learning_r = [0.005, 0.01]
 
 parameters = {'n_estimators':n_estimators,
@@ -525,14 +438,14 @@ parameters = {'n_estimators':n_estimators,
 grid = GridSearchCV(AdaBoostClassifier(base_estimator= None, ## If None, then the base estimator is a decision tree.
                                      ),
                                  param_grid=parameters,
-                                 cv=5,
+                                 cv=cv,
                                  n_jobs = -1)
             
-grid.fit(X_train, y_train.ravel()) 
+grid.fit(X_train, y_train) 
 
 adaBoost_grid = grid.best_estimator_
 # Train the model using the training sets 
-adaBoost_grid.fit(X_train_res, y_train_res.ravel())
+adaBoost_grid.fit(X_train, y_train)
 
 # Prediction on test data
 y_pred_ada = adaBoost_grid.predict(X_test)
@@ -543,7 +456,34 @@ fpr, tpr, thresholds = roc_curve(y_test, y_pred_ada)
 plot_roc_curve(fpr, tpr)
 
 #%%
+clf = CatBoostClassifier()
+params = {'iterations': [10],
+          'depth': [12,15],
+          'loss_function': ['Logloss', 'CrossEntropy'],
+          'l2_leaf_reg': [5],
+          'leaf_estimation_iterations': [10],
+#           'eval_metric': ['Accuracy'],
+#           'use_best_model': ['True'],
+          'logging_level':['Silent'],
+          'random_seed': [42]
+         }
+scorer = make_scorer(accuracy_score)
+clf_grid = GridSearchCV(estimator=clf, param_grid=params, scoring=scorer, cv=5,n_jobs=-1)
+clf_grid.fit(X_train_res, y_train_res.ravel())
 
+
+cat_grid = clf_grid.best_estimator_
+# Train the model using the training sets 
+cat_grid.fit(X_train_res, y_train_res.ravel())
+
+# Prediction on test data
+y_pred_cat = cat_grid.predict(X_test)
+
+model_metrics(y_test,y_pred_cat)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_cat) 
+plot_roc_curve(fpr, tpr)
+
+#%%
 #%%
 parameters = {
     "loss":["deviance"],
@@ -557,12 +497,12 @@ parameters = {
     "n_estimators":[30]
     }
 
-clf_gb = GridSearchCV(GradientBoostingClassifier(), parameters,cv=3,n_jobs=-1)
-clf_gb.fit(X_train, y_train.ravel())
+clf_gb = GridSearchCV(GradientBoostingClassifier(), parameters,n_jobs=-1)
+clf_gb.fit(X_train, y_train)
 
 
 clf_gb_best = clf_gb.best_estimator_
-clf_gb_best.fit(X_train_res, y_train_res.ravel())
+clf_gb_best.fit(X_train, y_train)
 # print(clf.score(X_train_res, y_train_res.ravel()))
 # print(clf.best_params_)
 
@@ -571,10 +511,3 @@ y_pred_gb= clf_gb_best.predict(X_test)
 model_metrics(y_test,y_pred_gb)
 fpr, tpr, thresholds = roc_curve(y_test, y_pred_gb) 
 plot_roc_curve(fpr, tpr)
-
-#%%
-# plt.figure(figsize=(15, 4))
-# plt.plot(['Logistic','AdaBoost',"Decision Tree","RandonForest","Support Vector Machines","LightGBM","Xgboost"], [acc_logreg, acc_ada,acc_dt, acc_rf, acc_svm, acc_lgb,acc_xgb], 'ro')
-
-# plt.show()
-#%%
